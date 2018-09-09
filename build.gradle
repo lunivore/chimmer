@@ -1,0 +1,58 @@
+group 'com.lunivore'
+version '0.0.1'
+
+buildscript {
+    ext.kotlinVersion = '1.2.60'
+    ext.junitVersion  = '4.12'
+    ext.log4jVersion = '2.8.2'
+    ext.mockitoVersion = '1.10.19'
+
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion"
+    }
+}
+
+apply plugin: 'java'
+apply plugin: 'kotlin'
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+sourceSets {
+    scenarios {
+        kotlin {
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+            srcDir file('src/scenarios/kotlin')
+            resources.srcDirs = ["src/scenarios/resources", "src/test/resources"]
+        }
+    }
+}
+
+compileKotlin {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+
+dependencies {
+
+    compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+    compile "org.apache.logging.log4j:log4j-api:2.11.1"
+    compile "org.apache.logging.log4j:log4j-core:2.11.1"
+
+    testCompile "junit:junit:$junitVersion"
+    testCompile "org.mockito:mockito-all:$mockitoVersion"
+
+    testRuntime "junit:junit:$junitVersion"
+
+    scenariosCompile "junit:junit:$junitVersion"
+    scenariosCompile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+
+    scenariosRuntime "junit:junit:$junitVersion"
+}
