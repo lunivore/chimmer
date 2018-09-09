@@ -1,4 +1,20 @@
 package com.lunivore.chimmer
 
-class Mod(val name: String) {
+import com.lunivore.chimmer.binary.ModBinary
+import com.lunivore.chimmer.skyrim.Weapon
+
+data class Mod(val name: String, private val modBinary: ModBinary) {
+
+    val weapons: List<Weapon>
+        get() {
+            return listOf()
+        }
+
+    fun renderTo(renderer: (ByteArray) -> Unit) {
+        modBinary.renderTo(renderer)
+    }
+
+    fun withWeapons(weapons: List<Weapon>): List<Weapon> {
+        TODO()
+    }
 }

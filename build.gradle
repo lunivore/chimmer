@@ -3,7 +3,7 @@ version '0.0.1'
 
 buildscript {
     ext.kotlinVersion = '1.2.60'
-    ext.junitVersion  = '4.12'
+    ext.junitVersion = '4.12'
     ext.log4jVersion = '2.8.2'
     ext.mockitoVersion = '1.10.19'
 
@@ -45,6 +45,7 @@ dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
     compile "org.apache.logging.log4j:log4j-api:2.11.1"
     compile "org.apache.logging.log4j:log4j-core:2.11.1"
+    compile "org.jetbrains.kotlin:kotlin-reflect"
 
     testCompile "junit:junit:$junitVersion"
     testCompile "org.mockito:mockito-all:$mockitoVersion"
@@ -53,6 +54,9 @@ dependencies {
 
     scenariosCompile "junit:junit:$junitVersion"
     scenariosCompile "org.jetbrains.kotlin:kotlin-stdlib:$kotlinVersion"
+    scenariosCompile "org.jetbrains.kotlin:kotlin-reflect"
+    scenariosCompile "org.apache.logging.log4j:log4j-api:2.11.1"
+    scenariosCompile "org.apache.logging.log4j:log4j-core:2.11.1"
 
     scenariosRuntime "junit:junit:$junitVersion"
 }

@@ -1,7 +1,7 @@
 package com.lunivore.chimmer
 
-import org.junit.Assert.assertEquals
-import org.junit.Assert.fail
+import com.lunivore.chimmer.scenariohelpers.asResourceFile
+import org.junit.Assert.*
 import org.junit.Test
 import java.io.File
 import java.io.FileNotFoundException
@@ -28,7 +28,7 @@ class LoadingAndSavingFiles {
 
         // Given we provide the load order with the iron sword first
         val plugins = listOf("IronSword.esp", "ArmorBootsSwordCrossbow.esp")
-        val modDirectory =  asResourceFile("plugins.txt").parentFile
+        val modDirectory = asResourceFile("plugins.txt").parentFile
 
         // When we load them using that order
         var mods = Chimmer().load(modDirectory, plugins, null)
@@ -47,24 +47,7 @@ class LoadingAndSavingFiles {
     fun `should tell us if any file is not found`() {
         // Given a file that's not found
         val plugins = listOf("IDoNotExist.esp")
-        val modFolder =  asResourceFile("plugins.txt").parentFile
-
-        // When we try to load it
-         try {
-             var mods = Chimmer().load(modFolder, plugins, null)
-             fail("Should have thrown an exception")
-         } catch (e: FileNotFoundException) {
-             // Expected
-         }
-
-        // Then it should throw an exception
-    }
-
-    @Test
-    fun `should tell us if the mod directory can't be found`() {
-        // Given a mod folder that's not found
-        val plugins = listOf("IronSword.esp")
-        val modFolder =  File("IDoNotExist")
+        val modFolder = asResourceFile("plugins.txt").parentFile
 
         // When we try to load it
         try {
@@ -77,8 +60,35 @@ class LoadingAndSavingFiles {
         // Then it should throw an exception
     }
 
-    private fun asResourceFile(filename: String): File {
-        val resourceEsp = LoadingAndSavingFiles::class.java.getResource("/$filename").file
-        return File(resourceEsp)
+    @Test
+    fun `should tell us if the mod directory can't be found`() {
+        // Given a mod folder that's not found
+        val plugins = listOf("IronSword.esp")
+        val modFolder = File("IDoNotExist")
+
+        // When we try to load it
+        try {
+            var mods = Chimmer().load(modFolder, plugins, null)
+            fail("Should have thrown an exception")
+        } catch (e: FileNotFoundException) {
+            // Expected
+        }
+
+        // Then it should throw an exception
+    }
+
+    @Test
+    fun `should be able to save a mod`() {
+        // Given we already loaded a mod
+        val plugins = listOf("IronSword.esp")
+        val modDirectory = asResourceFile("plugins.txt").parentFile
+        var mods = Chimmer().load(modDirectory, plugins, null)
+
+        // When we save it
+        val filename = "NewIronSword_${System.currentTimeMillis()}.esp"
+        Chimmer().save(mods[0], File("out"), filename)
+
+        // Then it should be available to us
+        assertTrue(File("out/$filename").exists())
     }
 }
