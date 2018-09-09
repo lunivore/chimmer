@@ -1,6 +1,6 @@
 package com.lunivore.chimmer.binary
 
-data class Grup(val headerBytes : List<Byte>, val records: List<Record>) : List<Record> by records {
+data class Grup(val type: String, val headerBytes : List<Byte>, val records: List<Record>) : List<Record> by records {
 
     companion object {
         fun parseAll(bytes: List<Byte>, masters: List<String>): List<Grup> {
@@ -10,14 +10,15 @@ data class Grup(val headerBytes : List<Byte>, val records: List<Record>) : List<
 
             while (rest.size > 3 && String(rest.subList(0, 4).toByteArray()) == "GRUP") {
                 val grupLength = rest.subList(4, 8).toLittleEndianInt() // Note that this INCLUDES the group header (24 bytes)
-                val grupHeaderBytes = rest.subList(8, 24)
+                val type = String(rest.subList(8, 12).toByteArray())
+                val grupHeaderBytes = rest.subList(12, 24)
                 val recordBytes = rest.subList(24, grupLength)
 
                 rest = if (rest.size >= grupLength) rest.subList(grupLength, rest.size) else listOf()
 
-                Record.logger.debug("Found Grup ${String(recordBytes.subList(0, 4).toByteArray())} with length $grupLength")
+                Record.logger.debug("Found Grup $type with length $grupLength")
 
-                val grup = Grup(grupHeaderBytes, recordBytes, masters)
+                val grup = Grup(type, grupHeaderBytes, recordBytes, masters)
 
                 grups.add(grup)
             }
@@ -26,8 +27,8 @@ data class Grup(val headerBytes : List<Byte>, val records: List<Record>) : List<
 
     }
 
-    constructor(headerBytes: List<Byte>, records: List<Byte>, masters: List<String>) :
-            this(headerBytes, Record.parseAll(records, masters).parsed)
+    constructor(type : String, headerBytes: List<Byte>, records: List<Byte>, masters: List<String>) :
+            this(type, headerBytes, Record.parseAll(records, masters).parsed)
 
     fun renderTo(renderer: (ByteArray) -> Unit) {
 
@@ -38,8 +39,13 @@ data class Grup(val headerBytes : List<Byte>, val records: List<Record>) : List<
 
         renderer("GRUP".toByteArray())
         renderer(lengthIncludingGroupHeader.toLittleEndianBytes())
+        renderer(type.toByteArray())
         renderer(headerBytes.toByteArray())
         forEach { it.renderTo(renderer) }
+    }
+
+    fun isType(type: String): Boolean {
+        return this.type == type
     }
 
 }

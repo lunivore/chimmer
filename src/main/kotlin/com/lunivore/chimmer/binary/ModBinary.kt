@@ -19,4 +19,10 @@ data class ModBinary(val header: Record, val grups: List<Grup>) : List<Grup> by 
         header.renderTo(renderer)
         grups.forEach { it.renderTo(renderer) }
     }
+
+    fun replaceGrup(type: String, recordWrappers: List<RecordWrapper>) : ModBinary {
+        return copy(grups = grups.map {
+            if (!it.isType(type)) it
+            else Grup(type, it.headerBytes, recordWrappers.map { it.record })})
+    }
 }
