@@ -28,5 +28,10 @@ class HexParsersTest {
         assertEquals("01 02 00 00", 513.toLittleEndianBytes().toReadableHexString())
     }
 
-
+    @Test
+    fun `Can convert a float to 4 little-endian bytes`() {
+        val converted = 1.7f.toLittleEndianBytes()
+        assertEquals("9A 99 D9 3F", converted.toReadableHexString()) // Found using TES5Edit
+    }
 }
+

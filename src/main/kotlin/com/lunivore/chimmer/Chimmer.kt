@@ -34,7 +34,7 @@ class Chimmer {
     }
 
     fun createMod(modName: String): Mod {
-        TODO("not implemented") //To change body of parsed functions use File | Settings | File Templates.
+        return Mod(modName, ModBinary.create())
     }
 
 

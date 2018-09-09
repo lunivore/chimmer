@@ -2,7 +2,7 @@ package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.testheplers.Hex
 import com.lunivore.chimmer.testheplers.fromHexStringToByteList
-import org.junit.Assert.assertEquals
+import org.junit.Assert.*
 import org.junit.Test
 import javax.xml.bind.DatatypeConverter
 
@@ -26,9 +26,7 @@ class ModBinaryTest {
         // And one weapon group
         assertEquals(1, modBinary.grups.size)
 
-        // (Yes, I know this is violating the Law of Demeter but it's how mods are organized.
-        // We'll sort it all out in the Skyrim-equivalent wrappers.)
-        assertEquals("WEAP", String(modBinary.first().first().header.subList(0, 4).toByteArray()))
+        assertEquals("WEAP", modBinary.first().first().type)
     }
 
     @Test
@@ -44,7 +42,25 @@ class ModBinaryTest {
         val newModBinary = modBinary.replaceGrup("WEAP", listOf(crossbow))
 
         // Then it should have the new crossbow in its records and not the old sword
-        assertEquals(crossbowRecord, newModBinary.first {it.isType("WEAP")}.first())
+        assertEquals(crossbowRecord, newModBinary.first { it.isType("WEAP") }.first())
+    }
+
+    @Test
+    fun `should be able to create a new ModBinary with an appropriate header`() {
+        // When we create a new mod binary
+        val modBinary = ModBinary.create()
+
+        // Then it should have all the appropriate fields set correctly in the TES4 record's header
+        assertEquals("TES4", modBinary.header.type)
+        assertEquals(0, modBinary.header.flags)
+        assertEquals("00000000".toByteArray().toList(), modBinary.header.formId)
+        assertEquals(43, modBinary.header.formVersion) // Oldrim
+        assertTrue(modBinary.grups.isEmpty())
+
+        // And appropriate fields set in the TES4 record itself too.
+        assertEquals(1.7f, modBinary.header.find("HEDR")?.asFloat())
+        assertEquals("Chimmer", modBinary.header.find("CNAM")?.asString())
+        assertNull(modBinary.header.find("MAST"))
     }
 
     data class GenericRecordWrapper(override val record : Record) : RecordWrapper

@@ -15,7 +15,6 @@ data class Mod(val name: String, private val modBinary: ModBinary) {
     }
 
     fun withWeapons(weapons: List<Weapon>): Mod {
-        TODO()
         return Mod(name, modBinary.replaceGrup("WEAP", weapons ))
     }
 }

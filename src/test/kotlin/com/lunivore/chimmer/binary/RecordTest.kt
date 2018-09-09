@@ -42,7 +42,7 @@ class RecordTest {
         val result = Record.parseAll((hex + rest).fromHexStringToByteList(), listOf("Skyrim.esm"))
 
         // Then we should have back a record of type "WEAP"
-        assertEquals("WEAP", String(result.parsed[0].header.subList(0, 4).toByteArray()))
+        assertEquals("WEAP", result.parsed[0].type)
 
         // And the rest should be returned too for further parsing
         assertEquals(rest, result.rest.toReadableHexString())
@@ -61,7 +61,6 @@ class RecordTest {
 
         // Then we should have the bytes back again identically
         assertEquals(hex, rendered.toByteArray().toReadableHexString())
-
     }
 }
 

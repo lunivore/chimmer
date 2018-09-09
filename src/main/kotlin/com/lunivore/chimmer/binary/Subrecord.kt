@@ -13,6 +13,10 @@ class Subrecord(val type: String, val bytes: List<Byte>) {
         return String(bytes.toByteArray()).trimEnd('\u0000')
     }
 
+    fun asFloat(): Float {
+        return bytes.subList(0, 4).toLittleEndianFloat()
+    }
+
     companion object {
         @JvmStatic
         val logger = LogManager.getLogger(Subrecord::class.java)

@@ -4,6 +4,10 @@ fun List<Byte>.toLittleEndianInt(): Int {
     return this.foldIndexed(0) { i, acc, b -> acc or (b.toInt() and 0xFF shl (8 * i)) }
 }
 
+fun List<Byte>.toLittleEndianFloat(): Float {
+    return Float.fromBits(this.toLittleEndianInt())
+}
+
 fun Short.toLittleEndianBytes(): ByteArray {
     val bytes = ByteArray(2)
 
@@ -19,4 +23,8 @@ fun Int.toLittleEndianBytes(): ByteArray {
         bytes[i] = this.ushr(i * 8).toByte()
     }
     return bytes
+}
+
+fun Float.toLittleEndianBytes(): ByteArray {
+    return this.toBits().toLittleEndianBytes()
 }

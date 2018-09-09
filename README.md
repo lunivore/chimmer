@@ -2,25 +2,25 @@
 
 Chimmer lets you change your mods easily! It will:
 
-- **TODO** - load a list of mods
-- **TODO** - in the order you specify (via a list, a multi-line string, or a file like plugins.txt)
+- load a list of mods
+- in the order you specify (via a list, a multi-line string, or a file like plugins.txt)
 - **TODO** - filtered if you want to
-- **TODO** - allowing you to programmatically manipulate the mod
+- allowing you to programmatically manipulate the mod
 - **TODO** - and create new records
 - **TODO** - or mark records as deleted
 - **TODO** - retaining consistency with previous patch runs via a consistency file a la SkyProc
 - **TODO** - while keeping it all in sync with any changes to the master list
-- **TODO** - and save it to a new mod.
+- and save it to a new mod.
 
 It is technically:
 
-- **TODO** - written in Kotlin
-- **TODO** - using data classes based on Bethesda's Group / Record / Subrecord format
+- written in Kotlin
+- using data classes based on Bethesda's Group / Record / Subrecord format
 - **TODO** - with nice wrappers round them that are more readable
-- **TODO** - while keeping the binary format behind the covers
+- while keeping the binary format behind the covers
 - **TODO** - so that the information doesn't diverge
-- **TODO** - allowing you to save it all
-- **TODO** - with sensible default settings.
+- allowing you to save it all
+- with sensible default settings.
 
 To load and save mods:
 

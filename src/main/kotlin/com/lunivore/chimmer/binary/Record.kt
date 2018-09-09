@@ -13,7 +13,7 @@ import com.lunivore.chimmer.Logging
  *
  * See http://en.uesp.net/wiki/Tes5Mod:Mod_File_Format#Records
  */
-data class Record(val header: List<Byte>, val subrecords: List<Subrecord>,
+data class Record(val type : String, val flags : Int, val formId : List<Byte>, val formVersion : Int, val subrecords: List<Subrecord>,
                   val masters: List<String> =
                           findMastersForTes4HeaderRecordOnly(subrecords))
     : List<Subrecord> by subrecords {
@@ -88,10 +88,33 @@ data class Record(val header: List<Byte>, val subrecords: List<Subrecord>,
          */
         private fun parseType(bytes: List<Byte>) = String(bytes.subList(0, 4).toByteArray())
 
+        fun createTes4(): Record {
+            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
+
     }
 
+    /**
+     * We discard everything else in the Record header as it's either never used or we'll derive it (e.g.: data size).
+     */
+    constructor(headerBytes: List<Byte>, subrecords: List<Subrecord>, masters: List<String>) :
+            this(String(headerBytes.subList(0, 4).toByteArray()), // Type
+                 headerBytes.subList(8, 12).toLittleEndianInt(),  // Flags
+                 headerBytes.subList(12, 16),                     // FormId (indexed to given masters)
+                 headerBytes.subList(20, 22).toLittleEndianInt(), // Version; Oldrim = 43, SSE = 44
+                    subrecords, masters)
+
     fun renderTo(renderer: (ByteArray) -> Unit) {
-        renderer(header.toByteArray())
+        var size = 0
+        subrecords.forEach { it.renderTo { size += it.size } }
+
+        renderer(type.toByteArray())
+        renderer(size.toLittleEndianBytes())
+        renderer(flags.toLittleEndianBytes())
+        renderer(formId.toByteArray())
+        renderer(0.toLittleEndianBytes())
+        renderer(formVersion.toShort().toLittleEndianBytes())
+        renderer(0.toShort().toLittleEndianBytes())
         subrecords.forEach { it.renderTo(renderer) }
     }
 
