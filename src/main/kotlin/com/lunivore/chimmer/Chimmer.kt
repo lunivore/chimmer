@@ -5,10 +5,14 @@ import java.io.FileNotFoundException
 
 class Chimmer {
     fun load(modFolder: File, loadOrderFile: File, consistencyFile: File?): List<Mod> {
-        val loadOrder = loadOrderFile.readLines()
+        return load(modFolder, loadOrderFile.readLines(), consistencyFile)
+    }
+
+    fun load(modFolder: File, loadOrder: List<String>, consistencyFile: File?): List<Mod> {
+        if (!modFolder.exists()) { throw FileNotFoundException("Could not find mod folder '${modFolder.absolutePath}'") }
         return loadOrder.map {
-            val file = modFolder.listFiles { _, name -> name == it }
-            if (file.size < 0) { throw FileNotFoundException("Could not find '$it' in folder '${modFolder.absolutePath}'") }
+            val matchingFiles = modFolder.listFiles { _, name -> name == it }
+            if (matchingFiles.isEmpty()) { throw FileNotFoundException("Could not find '$it' in folder '${modFolder.absolutePath}'") }
             Mod(it)
         }
     }
