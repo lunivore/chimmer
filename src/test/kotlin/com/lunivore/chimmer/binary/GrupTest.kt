@@ -1,7 +1,7 @@
 package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.testheplers.Hex
-import com.lunivore.chimmer.testheplers.fromHexStringToByteList
+import com.lunivore.chimmer.testheplers.fakeConsistencyRecorder
 import com.lunivore.chimmer.testheplers.toReadableHexString
 import org.junit.Assert.*
 import org.junit.Test
@@ -15,7 +15,7 @@ class GrupTest {
         val hex = Hex.IRON_SWORD_WEAPON_GROUP + Hex.UNINTERESTING_COLOUR_GROUP
 
         // When we parseAll the group
-        val grups = Grup.parseAll(hex.fromHexStringToByteList(), listOf("Skyrim.esm"))
+        val grups = Grup.parseAll(hex.fromHexStringToByteList(), listOf("Skyrim.esm"), ::fakeConsistencyRecorder)
 
         // Then we should be able to get the top-level records from it
         val weaponGrup = grups.first()
@@ -31,11 +31,11 @@ class GrupTest {
         val recordHex = Hex.IRON_SWORD_WEAPON + " " + Hex.CROSSBOW_WEAPON
         val recordBytes = recordHex.fromHexStringToByteList()
         val masters = listOf("Skyrim.esm", "Dawnguard.esm")
-        val grup = Grup("WEAP", groupHeaderBytes, Record.parseAll(recordBytes, masters).parsed)
+        val grup = Grup("WEAP", groupHeaderBytes, Record.parseAll(recordBytes, masters, ::fakeConsistencyRecorder).parsed)
 
         // When we render the group back to bytes again
         val renderer = ByteArrayOutputStream()
-        grup.renderTo {renderer.write(it)}
+        grup.renderTo { renderer.write(it) }
 
         // Then it should contain the same bytes as the original
         val result = renderer.toByteArray()

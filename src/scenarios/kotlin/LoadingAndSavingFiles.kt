@@ -2,11 +2,16 @@ package com.lunivore.chimmer
 
 import com.lunivore.chimmer.scenariohelpers.asResourceFile
 import org.junit.Assert.*
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import java.io.File
 import java.io.FileNotFoundException
 
 class LoadingAndSavingFiles {
+
+    @get:Rule
+    val outputFolder = TemporaryFolder()
 
     @Test
     fun `should be able to load mods from a directory`() {
@@ -16,7 +21,7 @@ class LoadingAndSavingFiles {
         val modDirectory = plugins.parentFile
 
         // When we load them using the order provided
-        val mods = Chimmer().load(modDirectory, plugins, null)
+        val mods = Chimmer(outputFolder.root).load(modDirectory, plugins)
 
         // Then we should have them in a list
         assertEquals(2, mods.size)
@@ -31,13 +36,13 @@ class LoadingAndSavingFiles {
         val modDirectory = asResourceFile("plugins.txt").parentFile
 
         // When we load them using that order
-        var mods = Chimmer().load(modDirectory, plugins, null)
+        var mods = Chimmer(outputFolder.root).load(modDirectory, plugins)
 
         // Then we should have them in that order
         assertEquals(listOf("IronSword.esp", "ArmorBootsSwordCrossbow.esp"), mods.map { it.name }.toList())
 
         // When we load them using a reverse order
-        mods = Chimmer().load(modDirectory, plugins.reversed(), null)
+        mods = Chimmer(outputFolder.root).load(modDirectory, plugins.reversed())
 
         // Then we should have them in the other order
         assertEquals(listOf("ArmorBootsSwordCrossbow.esp", "IronSword.esp"), mods.map { it.name }.toList())
@@ -51,7 +56,7 @@ class LoadingAndSavingFiles {
 
         // When we try to load it
         try {
-            var mods = Chimmer().load(modFolder, plugins, null)
+            var mods = Chimmer(outputFolder.root).load(modFolder, plugins)
             fail("Should have thrown an exception")
         } catch (e: FileNotFoundException) {
             // Expected
@@ -68,7 +73,7 @@ class LoadingAndSavingFiles {
 
         // When we try to load it
         try {
-            var mods = Chimmer().load(modFolder, plugins, null)
+            var mods = Chimmer(outputFolder.root).load(modFolder, plugins)
             fail("Should have thrown an exception")
         } catch (e: FileNotFoundException) {
             // Expected
@@ -82,13 +87,14 @@ class LoadingAndSavingFiles {
         // Given we already loaded a mod
         val plugins = listOf("IronSword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
-        var mods = Chimmer().load(modDirectory, plugins, null)
+        val chimmer = Chimmer(outputFolder.root)
+        var mods = chimmer.load(modDirectory, plugins)
 
-        // When we save it
+        // When we save it as a new mod
         val filename = "NewIronSword_${System.currentTimeMillis()}.esp"
-        Chimmer().save(mods[0], File("out"), filename)
+        chimmer.save(mods[0].copy(name = filename))
 
         // Then it should be available to us
-        assertTrue(File("out/$filename").exists())
+        assertTrue(File(outputFolder.root, "$filename").exists())
     }
 }

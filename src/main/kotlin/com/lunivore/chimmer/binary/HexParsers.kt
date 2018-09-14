@@ -1,5 +1,7 @@
 package com.lunivore.chimmer.binary
 
+import javax.xml.bind.DatatypeConverter
+
 fun List<Byte>.toLittleEndianInt(): Int {
     return this.foldIndexed(0) { i, acc, b -> acc or (b.toInt() and 0xFF shl (8 * i)) }
 }
@@ -27,4 +29,12 @@ fun Int.toLittleEndianBytes(): ByteArray {
 
 fun Float.toLittleEndianBytes(): ByteArray {
     return this.toBits().toLittleEndianBytes()
+}
+
+fun String.toByteList(): List<Byte> {
+    return this.toByteArray().toList()
+}
+
+fun String.fromHexStringToByteList(): List<Byte> {
+    return DatatypeConverter.parseHexBinary(this.replace(" ", "")).toList()
 }

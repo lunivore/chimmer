@@ -1,9 +1,13 @@
 package com.lunivore.chimmer.binary
 
-data class Grup(val type: String, val headerBytes : List<Byte>, val records: List<Record>) : List<Record> by records {
+import com.lunivore.chimmer.ConsistencyRecorder
+
+data class Grup(val type: String, val headerBytes: List<Byte>, val records: List<Record>) : List<Record> by records {
 
     companion object {
-        fun parseAll(bytes: List<Byte>, masters: List<String>): List<Grup> {
+        val EMPTY_HEADER_BYTES = ByteArray(12).toList()
+
+        fun parseAll(bytes: List<Byte>, masters: List<String>, consistencyRecorder: ConsistencyRecorder): List<Grup> {
 
             val grups = mutableListOf<Grup>()
             var rest = bytes
@@ -18,7 +22,7 @@ data class Grup(val type: String, val headerBytes : List<Byte>, val records: Lis
 
                 Record.logger.debug("Found Grup $type with length $grupLength")
 
-                val grup = Grup(type, grupHeaderBytes, recordBytes, masters)
+                val grup = Grup(type, grupHeaderBytes, recordBytes, masters, consistencyRecorder)
 
                 grups.add(grup)
             }
@@ -27,8 +31,9 @@ data class Grup(val type: String, val headerBytes : List<Byte>, val records: Lis
 
     }
 
-    constructor(type : String, headerBytes: List<Byte>, records: List<Byte>, masters: List<String>) :
-            this(type, headerBytes, Record.parseAll(records, masters).parsed)
+    constructor(type: String, headerBytes: List<Byte>, records: List<Byte>, masters: List<String>,
+                consistencyRecorder: ConsistencyRecorder) :
+            this(type, headerBytes, Record.parseAll(records, masters, consistencyRecorder).parsed)
 
     fun renderTo(renderer: (ByteArray) -> Unit) {
 

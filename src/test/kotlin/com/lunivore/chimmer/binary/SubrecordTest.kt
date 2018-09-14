@@ -1,6 +1,5 @@
 package com.lunivore.chimmer.binary
 
-import com.lunivore.chimmer.testheplers.fromHexStringToByteList
 import com.lunivore.chimmer.testheplers.toReadableHexString
 import org.junit.Assert
 import org.junit.Assert.assertEquals
@@ -54,7 +53,7 @@ class SubrecordTest {
 
         // When we ask it to render itself to a renderer
         var rendered = ByteArrayOutputStream()
-        sub.renderTo({rendered.write(it)})
+        sub.renderTo({ rendered.write(it) })
 
         // Then it should be rendered successfully
         val expected = "44 41 54 41 04 00 00 00 00 00"

@@ -1,6 +1,8 @@
 package com.lunivore.chimmer.binary
 
+import com.lunivore.chimmer.ConsistencyRecorder
 import com.lunivore.chimmer.Logging
+import javax.xml.bind.DatatypeConverter
 
 /**
  * Records hold data about some in-game object or concept, like an iron sword or a fireball spell. They have a
@@ -13,22 +15,27 @@ import com.lunivore.chimmer.Logging
  *
  * See http://en.uesp.net/wiki/Tes5Mod:Mod_File_Format#Records
  */
-data class Record(val type : String, val flags : Int, val formId : List<Byte>, val formVersion : Int, val subrecords: List<Subrecord>,
-                  val masters: List<String> =
-                          findMastersForTes4HeaderRecordOnly(subrecords))
+data class Record(val type: String, val flags: Int, val formId: Int, val formVersion: Int, val subrecords: List<Subrecord>,
+                  val masters: List<String>, val consistencyRecorder: ConsistencyRecorder)
     : List<Subrecord> by subrecords {
 
     companion object {
         val RECORD_HEADER_SIZE = 24
         val logger by Logging()
 
+        val consistencyRecorderForTes4: ConsistencyRecorder = {
+            throw IllegalStateException("TES4 records should always have form id of 0")
+        }
+
         fun parseTes4(bytes: List<Byte>): ParseResult<Record> {
             val (headerBytes, subrecordResult, rest) = parseDataForType("TES4", bytes)
             val masters = findMastersForTes4HeaderRecordOnly(subrecordResult.parsed)
-            return ParseResult(Record(headerBytes, subrecordResult.parsed, masters), rest)
+
+            return ParseResult(Record(headerBytes, subrecordResult.parsed, masters,
+                    consistencyRecorderForTes4), rest)
         }
 
-        fun parseAll(bytes: List<Byte>, masters: List<String>): ParseResult<List<Record>> {
+        fun parseAll(bytes: List<Byte>, masters: List<String>, consistencyRecorder: ConsistencyRecorder): ParseResult<List<Record>> {
             val records = mutableListOf<Record>()
             var rest = bytes
             // TODO: Throw an exception if the bytes aren't long enough to be a record
@@ -40,7 +47,7 @@ data class Record(val type : String, val flags : Int, val formId : List<Byte>, v
                 val (headerBytes, subrecordResult, newRest) = parseDataForType(type, rest)
                 rest = newRest
 
-                records.add(Record(headerBytes, subrecordResult.parsed, masters))
+                records.add(Record(headerBytes, subrecordResult.parsed, masters, consistencyRecorder))
             }
             return ParseResult(records, rest)
         }
@@ -62,7 +69,7 @@ data class Record(val type : String, val flags : Int, val formId : List<Byte>, v
             val postHeaderData = bytes.subList(24, bytes.size)
             val recordData = postHeaderData.subList(0, recordLength)
 
-            logger.info("Found type $type with form Id ${bytes.subList(12, 16).toList()}, length $recordLength")
+            logger.info("Found type $type with form Id ${DatatypeConverter.printHexBinary(bytes.subList(12, 16).toByteArray())}, length $recordLength")
 
             val rest = if (postHeaderData.size > recordLength)
                 postHeaderData.subList(recordLength, postHeaderData.size) else listOf()
@@ -88,21 +95,19 @@ data class Record(val type : String, val flags : Int, val formId : List<Byte>, v
          */
         private fun parseType(bytes: List<Byte>) = String(bytes.subList(0, 4).toByteArray())
 
-        fun createTes4(): Record {
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-        }
-
     }
 
     /**
      * We discard everything else in the Record header as it's either never used or we'll derive it (e.g.: data size).
      */
-    constructor(headerBytes: List<Byte>, subrecords: List<Subrecord>, masters: List<String>) :
+    constructor(headerBytes: List<Byte>, subrecords: List<Subrecord>, masters: List<String>,
+                consistencyRecorder: ConsistencyRecorder) :
+
             this(String(headerBytes.subList(0, 4).toByteArray()), // Type
-                 headerBytes.subList(8, 12).toLittleEndianInt(),  // Flags
-                 headerBytes.subList(12, 16),                     // FormId (indexed to given masters)
-                 headerBytes.subList(20, 22).toLittleEndianInt(), // Version; Oldrim = 43, SSE = 44
-                    subrecords, masters)
+                    headerBytes.subList(8, 12).toLittleEndianInt(),  // Flags
+                    headerBytes.subList(12, 16).toLittleEndianInt(),  // FormId (indexed to given masters)
+                    headerBytes.subList(20, 22).toLittleEndianInt(), // Version; Oldrim = 43, SSE = 44
+                    subrecords, masters, consistencyRecorder)
 
     fun renderTo(renderer: (ByteArray) -> Unit) {
         var size = 0
@@ -111,7 +116,7 @@ data class Record(val type : String, val flags : Int, val formId : List<Byte>, v
         renderer(type.toByteArray())
         renderer(size.toLittleEndianBytes())
         renderer(flags.toLittleEndianBytes())
-        renderer(formId.toByteArray())
+        renderer(formId.toLittleEndianBytes())
         renderer(0.toLittleEndianBytes())
         renderer(formVersion.toShort().toLittleEndianBytes())
         renderer(0.toShort().toLittleEndianBytes())
@@ -123,6 +128,22 @@ data class Record(val type : String, val flags : Int, val formId : List<Byte>, v
      */
     fun find(type: String): Subrecord? {
         return find { it.type == type }
+    }
+
+    fun copyAsNew(): Record {
+        val editorId: String = find("EDID")?.asString()
+                ?: throw IllegalStateException("This record has no EDID subrecord and cannot be copied as new")
+        val unindexedFormId = consistencyRecorder(editorId)
+
+        val nextMasterIndex = masters.size
+        val indexedFormId = (nextMasterIndex shl 24) + unindexedFormId
+
+        return copy(formId = indexedFormId)
+    }
+
+    fun with(newSubrecord: Subrecord): Record {
+        val subrecords = map { if (it.type == newSubrecord.type) newSubrecord else it }
+        return copy(subrecords = subrecords)
     }
 
 

@@ -3,10 +3,6 @@ package com.lunivore.chimmer.testheplers
 import com.lunivore.chimmer.binary.Subrecord
 import javax.xml.bind.DatatypeConverter
 
-fun String.fromHexStringToByteList(): List<Byte> {
-    return DatatypeConverter.parseHexBinary(this.replace(" ", "")).toList()
-}
-
 fun ByteArray.toReadableHexString(): String {
     return DatatypeConverter.printHexBinary(this).foldIndexed("") { i, string, char ->
         string + char + (if (i % 2 > 0) " " else "")

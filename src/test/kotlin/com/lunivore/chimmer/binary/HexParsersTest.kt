@@ -1,6 +1,5 @@
 package com.lunivore.chimmer.binary
 
-import com.lunivore.chimmer.testheplers.fromHexStringToByteList
 import com.lunivore.chimmer.testheplers.toReadableHexString
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -32,6 +31,11 @@ class HexParsersTest {
     fun `Can convert a float to 4 little-endian bytes`() {
         val converted = 1.7f.toLittleEndianBytes()
         assertEquals("9A 99 D9 3F", converted.toReadableHexString()) // Found using TES5Edit
+    }
+
+    @Test
+    fun `Can convert a hex string to a byte list`() {
+        assertEquals("0102000A".fromHexStringToByteList(), listOf(1, 2, 0, 10).map { it.toByte() })
     }
 }
 
