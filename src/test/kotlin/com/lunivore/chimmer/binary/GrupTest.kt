@@ -35,7 +35,7 @@ class GrupTest {
 
         // When we render the group back to bytes again
         val renderer = ByteArrayOutputStream()
-        grup.renderTo { renderer.write(it) }
+        grup.renderTo({ renderer.write(it) }, masters)
 
         // Then it should contain the same bytes as the original
         val result = renderer.toByteArray()

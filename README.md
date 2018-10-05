@@ -8,7 +8,7 @@ Chimmer lets you change your mods easily! It will:
 - allowing you to programmatically manipulate the mod
 - and create new records
 - **TODO** - or mark records as deleted
-- retaining consistency with previous patch runs via a consistency file a la SkyProc
+- **TODO** - retaining consistency with previous patch runs via a consistency file a la SkyProc
 - **TODO** - while keeping it all in sync with any changes to the master list
 - and save it to a new mod.
 
@@ -16,9 +16,9 @@ It is technically:
 
 - written in Kotlin
 - using data classes based on Bethesda's Group / Record / Subrecord format
-- **TODO** - with nice wrappers round them that are more readable
+- with nice wrappers round them that are more readable
 - while keeping the binary format behind the covers
-- **TODO** - so that the information doesn't diverge
+- so that the information doesn't diverge
 - allowing you to save it all
 - with sensible default settings.
 

@@ -24,7 +24,7 @@ class ConsistencyFileHandlerTest {
         """.trimIndent().toByteArray())
 
         // When we ask the consistency file handler for a form id for an existing editor id
-        val consistencyRecorder = ConsistencyFileHandler(outputFolder.root, {File(outputFolder.root, consistencyFile.name)}).recorderFor(modName)
+        val consistencyRecorder = ConsistencyFileHandler(outputFolder.root) {File(outputFolder.root, consistencyFile.name)}.recorderFor(modName)
         val unindexedFormId = consistencyRecorder("MY_MOD_EditorId_123456")
 
         // Then it should give it back to us

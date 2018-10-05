@@ -17,9 +17,9 @@ class CreatingANewMod {
     @Test
     fun `should be able to create a new mod with the contents of an old one`() {
         // Given we loaded a mod with an iron sword in
-        val plugins = listOf("IronSword.esp")
+        val plugins = listOf("Skyrim.esm", "IronSword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
-        val chimmer = Chimmer(outputFolder.root)
+        val chimmer = Chimmer(outputFolder.root, loadRealSkyrimFiles = false)
         var mods = chimmer.load(modDirectory, plugins)
 
         // When we parse a new mod with the same iron sword
@@ -47,8 +47,13 @@ class CreatingANewMod {
         var mods = chimmer.load(modDirectory, plugins)
 
         // When we create a new mod with a copy of that sword that's not an override
-        val sword = mods[0].weapons.first().copyAsNew()
         val modName = "NewIronSword_${System.currentTimeMillis()}.esp"
+        val sword = mods[0].weapons.first().copyAsNew(modName)
+
+        // TODO Looks as if this is using the consistency recorder from the original mod,
+        // rather than a new one with the new mod name. It's working,
+        // but I suspect that may be coincidental - need to check!
+
         val newMod = chimmer.createMod(modName).withWeapons(listOf(sword))
 
         // Then the sword should be given an appropriate ID
@@ -57,12 +62,15 @@ class CreatingANewMod {
         // When we save the mod
         chimmer.save(newMod)
 
-        // And we reload the mod again
+        // And we reload the mod again (in a new instance of Chimmer)
         mods = Chimmer(outputFolder.root).load(outputFolder.root, listOf(modName))
 
         // Then the sword should have the same ID
-        val reloadedSwordId = newMod.weapons.first().formId()
-        assertEquals(formId.asReadableString(), reloadedSwordId.asReadableString())
+        val reloadedSwordId = mods[0].weapons.first().formId()
+        assertEquals(formId, reloadedSwordId)
     }
+
+    @Test
+    fun `Just a reminder to also check that created mods are fine when loaded with TES5Edit`(){}
 
 }

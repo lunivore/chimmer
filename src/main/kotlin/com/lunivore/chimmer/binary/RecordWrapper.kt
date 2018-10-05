@@ -1,13 +1,13 @@
 package com.lunivore.chimmer.binary
 
-import com.lunivore.chimmer.skyrim.FormId
+import com.lunivore.chimmer.FormId
 
 interface RecordWrapper<T> {
-    fun copyAsNew(): T = copy(record.copyAsNew())
+    fun copyAsNew(master : String): T = copy(record.copyAsNew(master))
 
     fun copy(newRecord: Record): T
 
-    fun formId(): FormId = FormId(record.formId, record.masters)
+    fun formId(): FormId = record.formId
 
     val record: Record
 }

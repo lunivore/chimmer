@@ -35,10 +35,10 @@ data class Grup(val type: String, val headerBytes: List<Byte>, val records: List
                 consistencyRecorder: ConsistencyRecorder) :
             this(type, headerBytes, Record.parseAll(records, masters, consistencyRecorder).parsed)
 
-    fun renderTo(renderer: (ByteArray) -> Unit) {
+    fun renderTo(renderer: (ByteArray) -> Unit, masterList: List<String>) {
 
         var lengthOfRecords = 0
-        forEach { it.renderTo { lengthOfRecords += it.size } }
+        forEach { it.renderTo({ lengthOfRecords += it.size }, masterList) }
 
         val lengthIncludingGroupHeader = 24 + lengthOfRecords
 
@@ -46,7 +46,7 @@ data class Grup(val type: String, val headerBytes: List<Byte>, val records: List
         renderer(lengthIncludingGroupHeader.toLittleEndianBytes())
         renderer(type.toByteArray())
         renderer(headerBytes.toByteArray())
-        forEach { it.renderTo(renderer) }
+        forEach { it.renderTo(renderer, masterList) }
     }
 
     fun isType(type: String): Boolean {

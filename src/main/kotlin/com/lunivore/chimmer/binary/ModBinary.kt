@@ -1,10 +1,10 @@
 package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.ConsistencyRecorder
+import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.binary.Record.Companion.consistencyRecorderForTes4
 
 
-// TODO: Recalculate size, next available object id (highest + 1024), number of records and groups, and the masterlist.
 data class ModBinary(val header: Record, val grups: List<Grup>) : List<Grup> by grups {
     companion object {
         private val OLDRIM_VERSION = 43
@@ -39,24 +39,26 @@ data class ModBinary(val header: Record, val grups: List<Grup>) : List<Grup> by 
             return ModBinary(headerRecord, grups)
         }
 
-        fun create(consistencyRecorder: ConsistencyRecorder): ModBinary {
+        fun create(modName: String, accessor: ConsistencyRecorder): ModBinary {
             val tes4subrecords = listOf(
                     Subrecord("HEDR", listOf(
                             1.7f.toLittleEndianBytes().toList(),
                             0.toLittleEndianBytes().toList(),
                             1024.toLittleEndianBytes().toList()).flatten()),
-                    Subrecord("CNAM", "Chimmer\u0000".toByteArray().toList()),
-                    Subrecord("SNAM", "\u0000".toByteArray().toList()))
+                    Subrecord("CNAM", "Chimmer\u0000".toByteList()),
+                    Subrecord("SNAM", "\u0000".toByteList()))
 
-            val tes4 = Record("TES4", 0, 0, OLDRIM_VERSION, tes4subrecords, listOf(),
+            // Note that we're not adding the masterlist here; it needs to be derived when we're ready to save.
+
+            val tes4 = Record("TES4", 0, FormId.TES4, OLDRIM_VERSION, tes4subrecords, listOf(modName),
                     consistencyRecorderForTes4)
             return ModBinary(tes4, listOf())
         }
     }
 
-    fun renderTo(renderer: (ByteArray) -> Unit) {
-        header.renderTo(renderer)
-        grups.forEach { it.renderTo(renderer) }
+    fun renderTo(renderer: (ByteArray) -> Unit, masterList: List<String>) {
+        header.renderTo(renderer, masterList)
+        grups.forEach { it.renderTo(renderer, masterList) }
     }
 
     fun <T : RecordWrapper<T>> createOrReplaceGrup(type: String, recordWrappers: List<T>): ModBinary {

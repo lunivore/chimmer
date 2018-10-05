@@ -58,7 +58,7 @@ class RecordTest {
         // When we turn it back into bytes
 
         val rendered = ByteArrayOutputStream()
-        record.renderTo { rendered.write(it) }
+        record.renderTo({ rendered.write(it) }, listOf("Skyrim.esm"))
 
         // Then we should have the bytes back again identically
         assertEquals(hex, rendered.toByteArray().toReadableHexString())
@@ -69,20 +69,42 @@ class RecordTest {
 
         // Given a record containing an iron sword
         // And a new sword that was generated last time with a new EDID that was tracked for consistency
+        val unindexedFormId = "00ABCD".fromHexStringToByteList().toLittleEndianInt()
         val consistencyRecorder: ConsistencyRecorder = {
-            if (it == "MY_MOD_Editor_Id_123456") "00ABCD".fromHexStringToByteList().toLittleEndianInt()
-            else throw IllegalArgumentException("This will not happen in this test code.")
+            if (it == "MY_MOD_Editor_Id_123456") {
+                unindexedFormId
+            } else throw IllegalArgumentException("This will not happen in this test code.")
         }
 
         val hex = Hex.IRON_SWORD_WEAPON
         val record = Record.parseAll(hex.fromHexStringToByteList(), listOf("Skyrim.esm"), consistencyRecorder).parsed[0]
 
         // When we copy the record with a new editor id as new
-        val newRecord = record.with(Subrecord("EDID", "MY_MOD_Editor_Id_123456\u0000".toByteList())).copyAsNew()
+        val newRecord = record.with(Subrecord("EDID", "MY_MOD_Editor_Id_123456\u0000".toByteList()))
+                .copyAsNew("MyMod.esp")
 
-        // Then the form Id should be the newRecord but with an index of 01 (because 00 is Skyrim.esm)
-        // (Remembering little Endian is reversed so the "01" is at the end, not the beginning of the field in binary)
-        assertEquals("00 AB CD 01", newRecord.formId.toLittleEndianBytes().toReadableHexString())
+        // Then the form Id should have the unindexed id from the consistency file
+        // and the new master
+        assertEquals(unindexedFormId, newRecord.formId.unindexFormId)
+        assertEquals("MyMod.esp", newRecord.formId.master)
+    }
+
+    @Test
+    fun `should add the masters to the TES4 record on saving`() {
+        // Given a TES4 record
+        val binary = Hex.CHIMMER_MOD_HEADER.fromHexStringToByteList()
+        val tes4 = Record.parseTes4(binary).parsed
+
+        // When we ask it to render itself with a new masterlist
+        val rendered = ByteArrayOutputStream()
+        val masters = listOf("Skyrim.esm", "MyMod.esp")
+        tes4.renderTo({rendered.write(it)}, masters)
+
+        // Then it should have added the masters to the byte code
+        val reloadedTes4 = Record.parseTes4(rendered.toByteArray().toList()).parsed
+
+        assertEquals(masters, reloadedTes4.masters)
+
     }
 }
 

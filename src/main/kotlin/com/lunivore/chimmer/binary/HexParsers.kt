@@ -36,5 +36,9 @@ fun String.toByteList(): List<Byte> {
 }
 
 fun String.fromHexStringToByteList(): List<Byte> {
-    return DatatypeConverter.parseHexBinary(this.replace(" ", "")).toList()
+    return this.fromHexStringToByteArray().toList()
+}
+
+fun String.fromHexStringToByteArray(): ByteArray {
+    return DatatypeConverter.parseHexBinary(this.replace(" ", ""))
 }

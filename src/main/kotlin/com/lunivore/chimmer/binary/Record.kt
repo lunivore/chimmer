@@ -1,6 +1,7 @@
 package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.ConsistencyRecorder
+import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.Logging
 import javax.xml.bind.DatatypeConverter
 
@@ -15,7 +16,7 @@ import javax.xml.bind.DatatypeConverter
  *
  * See http://en.uesp.net/wiki/Tes5Mod:Mod_File_Format#Records
  */
-data class Record(val type: String, val flags: Int, val formId: Int, val formVersion: Int, val subrecords: List<Subrecord>,
+data class Record(val type: String, val flags: Int, val formId: FormId, val formVersion: Int, val subrecords: List<Subrecord>,
                   val masters: List<String>, val consistencyRecorder: ConsistencyRecorder)
     : List<Subrecord> by subrecords {
 
@@ -31,7 +32,7 @@ data class Record(val type: String, val flags: Int, val formId: Int, val formVer
             val (headerBytes, subrecordResult, rest) = parseDataForType("TES4", bytes)
             val masters = findMastersForTes4HeaderRecordOnly(subrecordResult.parsed)
 
-            return ParseResult(Record(headerBytes, subrecordResult.parsed, masters,
+            return ParseResult(create(headerBytes, subrecordResult.parsed, masters,
                     consistencyRecorderForTes4), rest)
         }
 
@@ -47,7 +48,7 @@ data class Record(val type: String, val flags: Int, val formId: Int, val formVer
                 val (headerBytes, subrecordResult, newRest) = parseDataForType(type, rest)
                 rest = newRest
 
-                records.add(Record(headerBytes, subrecordResult.parsed, masters, consistencyRecorder))
+                records.add(create(headerBytes, subrecordResult.parsed, masters, consistencyRecorder))
             }
             return ParseResult(records, rest)
         }
@@ -95,32 +96,77 @@ data class Record(val type: String, val flags: Int, val formId: Int, val formVer
          */
         private fun parseType(bytes: List<Byte>) = String(bytes.subList(0, 4).toByteArray())
 
+        /**
+         * We discard everything else in the Record header as it's either never used or we'll derive it (e.g.: data size).
+         */
+        fun create(headerBytes: List<Byte>, subrecords: List<Subrecord>, masters: List<String>,
+                    consistencyRecorder: ConsistencyRecorder) : Record {
+
+
+            val type = String(headerBytes.subList(0, 4).toByteArray())
+            val flags = headerBytes.subList(8, 12).toLittleEndianInt()
+            val formId = if (type == "TES4") FormId.TES4 else
+                FormId(headerBytes.subList(12, 16), masters)
+            val formVersion = headerBytes.subList(20, 22).toLittleEndianInt() // Oldrim = 43, SSE = 44
+            return Record(
+                    type,
+                    flags,
+                    formId,
+                    formVersion,
+                    subrecords,
+                    masters,
+                    consistencyRecorder)
+        }
+
     }
 
-    /**
-     * We discard everything else in the Record header as it's either never used or we'll derive it (e.g.: data size).
-     */
-    constructor(headerBytes: List<Byte>, subrecords: List<Subrecord>, masters: List<String>,
-                consistencyRecorder: ConsistencyRecorder) :
 
-            this(String(headerBytes.subList(0, 4).toByteArray()), // Type
-                    headerBytes.subList(8, 12).toLittleEndianInt(),  // Flags
-                    headerBytes.subList(12, 16).toLittleEndianInt(),  // FormId (indexed to given masters)
-                    headerBytes.subList(20, 22).toLittleEndianInt(), // Version; Oldrim = 43, SSE = 44
-                    subrecords, masters, consistencyRecorder)
+    fun renderTo(renderer: (ByteArray) -> Unit, masterList: List<String>) {
+        if (type == "TES4") {
+            renderTes4ReplacingMasterlistTo(renderer, masterList)
+        } else {
+            var size = 0
+            subrecords.forEach { it.renderTo { size += it.size } }
 
-    fun renderTo(renderer: (ByteArray) -> Unit) {
-        var size = 0
-        subrecords.forEach { it.renderTo { size += it.size } }
+            renderHeader(renderer, size, this.formId.toLittleEndianBytes(masterList))
+            subrecords.forEach { it.renderTo(renderer) }
+        }
 
+
+
+
+    }
+
+    private fun renderHeader(renderer: (ByteArray) -> Unit, size: Int, formId: ByteArray) {
         renderer(type.toByteArray())
         renderer(size.toLittleEndianBytes())
         renderer(flags.toLittleEndianBytes())
-        renderer(formId.toLittleEndianBytes())
+        renderer(formId)
         renderer(0.toLittleEndianBytes())
         renderer(formVersion.toShort().toLittleEndianBytes())
         renderer(0.toShort().toLittleEndianBytes())
-        subrecords.forEach { it.renderTo(renderer) }
+    }
+
+    private fun renderTes4ReplacingMasterlistTo(renderer: (ByteArray) -> Unit, masterList: List<String>) {
+        val tes4MasterSubrecords : List<Subrecord> =
+            masterList.map {
+                listOf(
+                        Subrecord("MAST", "$it\u0000".toByteList()),
+                        Subrecord("DATA", listOf()))
+            }.flatten()
+
+        val masterListTypes = listOf("MAST", "DATA")
+        val subrecordsWithoutMasters = subrecords.filter {
+            !masterListTypes.contains(it.type)
+        }
+
+        var size = 0
+        subrecordsWithoutMasters.forEach { it.renderTo { size += it.size } }
+        tes4MasterSubrecords.forEach { it.renderTo { size += it.size } }
+
+        renderHeader(renderer, size, ByteArray(4))
+        subrecordsWithoutMasters.forEach { it.renderTo(renderer)}
+        tes4MasterSubrecords.forEach { it.renderTo(renderer) }
     }
 
     /**
@@ -130,15 +176,12 @@ data class Record(val type: String, val flags: Int, val formId: Int, val formVer
         return find { it.type == type }
     }
 
-    fun copyAsNew(): Record {
+    fun copyAsNew(master : String): Record {
         val editorId: String = find("EDID")?.asString()
                 ?: throw IllegalStateException("This record has no EDID subrecord and cannot be copied as new")
         val unindexedFormId = consistencyRecorder(editorId)
 
-        val nextMasterIndex = masters.size
-        val indexedFormId = (nextMasterIndex shl 24) + unindexedFormId
-
-        return copy(formId = indexedFormId)
+        return copy(formId = FormId(unindexedFormId, master), masters = masters + listOf(master))
     }
 
     fun with(newSubrecord: Subrecord): Record {

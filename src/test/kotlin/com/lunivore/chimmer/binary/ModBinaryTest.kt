@@ -1,5 +1,6 @@
 package com.lunivore.chimmer.binary
 
+import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.testheplers.Hex
 import com.lunivore.chimmer.testheplers.fakeConsistencyRecorder
 import org.junit.Assert.*
@@ -37,7 +38,8 @@ class ModBinaryTest {
         val modBinary = ModBinary.parse(modBytes, ::fakeConsistencyRecorder)
 
         // When we ask it to replace the weapons with a Dawnguard crossbow
-        val crossbowRecord = Record.parseAll(Hex.CROSSBOW_WEAPON.fromHexStringToByteList(), listOf("Dawnguard.esm"), ::fakeConsistencyRecorder).parsed[0]
+        val crossbowRecord = Record.parseAll(Hex.CROSSBOW_WEAPON.fromHexStringToByteList(),
+                listOf("Skyrim.esm", "Dawnguard.esm"), ::fakeConsistencyRecorder).parsed[0]
         val crossbow = GenericRecordWrapper(crossbowRecord)
         val newModBinary = modBinary.createOrReplaceGrup("WEAP", listOf(crossbow))
 
@@ -48,13 +50,14 @@ class ModBinaryTest {
     @Test
     fun `should be able to add grups in the right place when they do not already exist`() {
         // Given a mod with grups TREE, FLOR and AMMO (WEAP belonging between FLOR and AMMO)
-        val modBinary = ModBinary.create(::fakeConsistencyRecorder).copy(grups = listOf(
+        val modBinary = ModBinary.create("MyMod.esp", accessor).copy(grups = listOf(
                 Grup("TREE", listOf(), listOf()),
                 Grup("FLOR", listOf(), listOf()),
                 Grup("AMMO", listOf(), listOf())))
 
         // When we add the Dawnguard crossbow
-        val crossbowRecord = Record.parseAll(Hex.CROSSBOW_WEAPON.fromHexStringToByteList(), listOf("Dawnguard.esm"), ::fakeConsistencyRecorder).parsed[0]
+        val crossbowRecord = Record.parseAll(Hex.CROSSBOW_WEAPON.fromHexStringToByteList(),
+                listOf("Skyrim.esm", "Dawnguard.esm"), ::fakeConsistencyRecorder).parsed[0]
         val crossbow = GenericRecordWrapper(crossbowRecord)
         val newModBinary = modBinary.createOrReplaceGrup("WEAP", listOf(crossbow))
 
@@ -66,12 +69,12 @@ class ModBinaryTest {
     @Test
     fun `should be able to create a new ModBinary with an appropriate header`() {
         // When we create a new mod binary
-        val modBinary = ModBinary.create(::fakeConsistencyRecorder)
+        val modBinary = ModBinary.create("myMod.esp", accessor)
 
         // Then it should have all the appropriate fields set correctly in the TES4 record's header
         assertEquals("TES4", modBinary.header.type)
         assertEquals(0, modBinary.header.flags)
-        assertEquals(0, modBinary.header.formId)
+        assertEquals(FormId.TES4, modBinary.header.formId)
         assertEquals(43, modBinary.header.formVersion) // Oldrim
         assertTrue(modBinary.grups.isEmpty())
 
