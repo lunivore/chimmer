@@ -1,4 +1,4 @@
-package com.lunivore.chimmer.skyrim
+package com.lunivore.chimmer
 
 @ExperimentalUnsignedTypes
 data class FormId(val raw: UInt, val masters: List<String>) {

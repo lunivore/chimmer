@@ -25,15 +25,16 @@ It is technically:
 
 To load and save mods:
 
-    val chimmer = Chimmer(ConsistencyFileHandler())
+    val chimmer = Chimmer(File("MyOutputFolder"), listOf("Skyrim.esm", "Dawnguard.esm"))
     val mods = chimmer.load(modFolder, pluginsList, filters)
 
 To create new mods, ensuring consistency with any previous patch run:
 
-    val chimmer = Chimmer(ConsistencyFileHandler())
+    val chimmer = Chimmer(File("MyOutputFolder"), File("plugins.txt"))
     val mod1 = chimmer.createMod("Chimmer1.esp")
-    val mod2 = chimmer.createMod("Chimmer1.esp")
-    chimmer.save(listOf(mod1, mod2), modFolder)
+    val mod2 = chimmer.createMod("Chimmer2.esp")
+    chimmer.save(mod1)
+    chimmer.save(mod2)
 
 To manipulate the mod records:
 

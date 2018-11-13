@@ -1,4 +1,4 @@
-package com.lunivore.chimmer.skyrim
+package com.lunivore.chimmer
 
 import org.junit.Assert.*
 import org.junit.Test

@@ -1,7 +1,7 @@
 package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.ConsistencyRecorder
-import com.lunivore.chimmer.skyrim.FormId
+import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.testheplers.Hex
 import com.lunivore.chimmer.testheplers.fakeConsistencyRecorder
 import com.lunivore.chimmer.testheplers.toReadableHexString

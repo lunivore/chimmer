@@ -1,8 +1,8 @@
 package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.ConsistencyRecorder
+import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.binary.Record.Companion.consistencyRecorderForTes4
-import com.lunivore.chimmer.skyrim.FormId
 
 
 // TODO: Recalculate next available object id (highest + 1024), number of records and groups, and the masterlist.

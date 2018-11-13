@@ -1,6 +1,6 @@
 package com.lunivore.chimmer.binary
 
-import com.lunivore.chimmer.skyrim.FormId
+import com.lunivore.chimmer.FormId
 
 @UseExperimental(ExperimentalUnsignedTypes::class)
 interface RecordWrapper<T : RecordWrapper<T>> {

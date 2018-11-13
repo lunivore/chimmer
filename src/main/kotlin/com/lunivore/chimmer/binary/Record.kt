@@ -1,8 +1,8 @@
 package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.ConsistencyRecorder
+import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.Logging
-import com.lunivore.chimmer.skyrim.FormId
 import javax.xml.bind.DatatypeConverter
 
 /**
