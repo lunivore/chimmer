@@ -3,6 +3,7 @@ package com.lunivore.chimmer
 import com.lunivore.chimmer.binary.toLittleEndianBytes
 import com.lunivore.chimmer.testheplers.toReadableHexString
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -24,7 +25,7 @@ class ConsistencyFileHandlerTest {
         """.trimIndent().toByteArray())
 
         // When we ask the consistency file handler for a form id for an existing editor id
-        val consistencyRecorder = ConsistencyFileHandler(outputFolder.root) {File(outputFolder.root, consistencyFile.name)}.recorderFor(modName)
+        val consistencyRecorder = ConsistencyFileHandler(outputFolder.root, {File(outputFolder.root, consistencyFile.name)}).recorderFor(modName)
         val unindexedFormId = consistencyRecorder("MY_MOD_EditorId_123456")
 
         // Then it should give it back to us
@@ -69,12 +70,35 @@ class ConsistencyFileHandlerTest {
         val unindexedFormId = consistencyRecorder("MY_MOD_NewId_7890ab")
 
         // Then it should give us back an id of 2048
-        assertEquals(2048, unindexedFormId)
+        assertEquals(2048u, unindexedFormId)
 
         // When we ask for the next one
         val nextId = consistencyRecorder("MY_MOD_AnotherNewId")
 
         // Then it should give us back an id of 2049
-        assertEquals(2049, nextId)
+        assertEquals(2049u, nextId)
+    }
+
+    @Test
+    fun `should create a new output file for new consistency along with any folders required`() {
+        // Given a consistency file which does not exist and a folder structure which doesn't exist either
+        val modName = "new_folder_${System.currentTimeMillis()}/also_new/myMod"
+
+        // When we ask for a new id
+        val handler = ConsistencyFileHandler(outputFolder.root) {File(outputFolder.root, it)}
+        val consistencyRecorder = handler.recorderFor(modName)
+        val unindexedFormId = consistencyRecorder("MY_MOD_NewId_7890ab")
+
+        // and then save the file for that mod
+        handler.saveConsistency(modName)
+
+        // then the file and all folders should be created
+        val newFile = File(outputFolder.root, modName)
+        assertTrue(newFile.exists())
+
+        // And it should have recorded the rawFormId (which will be 2048 as above)
+        val expected = "MY_MOD_NewId_7890ab:" + String(2048.toLittleEndianBytes()).subSequence(1, 3)
+        val actual = newFile.readLines()[0]
+        assertEquals(expected, actual)
     }
 }

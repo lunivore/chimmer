@@ -8,7 +8,7 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 import java.io.FileNotFoundException
 
-class LoadingAndSavingMods {
+class LoadingAndSavingFiles {
 
     @get:Rule
     val outputFolder = TemporaryFolder()
@@ -73,7 +73,7 @@ class LoadingAndSavingMods {
 
         // When we try to load it
         try {
-            Chimmer(outputFolder.root).load(modFolder, plugins)
+            var mods = Chimmer(outputFolder.root).load(modFolder, plugins)
             fail("Should have thrown an exception")
         } catch (e: FileNotFoundException) {
             // Expected
@@ -87,12 +87,12 @@ class LoadingAndSavingMods {
         // Given we already loaded a mod
         val plugins = listOf("Skyrim.esm", "IronSword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
-        val chimmer = Chimmer(outputFolder.root, loadRealSkyrimFiles = false)
-        var mods = chimmer.load(modDirectory, plugins)
+        val chimmer = Chimmer(outputFolder.root)
+        var mods = chimmer.load(modDirectory, plugins, false)
 
         // When we save it as a new mod
         val filename = "NewIronSword_${System.currentTimeMillis()}.esp"
-        chimmer.save(mods[0].copy(name = filename))
+        chimmer.save(mods[0].copy(name = filename), plugins)
 
         // Then it should be available to us
         assertTrue(File(outputFolder.root, "$filename").exists())

@@ -1,10 +1,11 @@
 package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.ConsistencyRecorder
+import com.lunivore.chimmer.skyrim.FormId
 import com.lunivore.chimmer.testheplers.Hex
 import com.lunivore.chimmer.testheplers.fakeConsistencyRecorder
 import com.lunivore.chimmer.testheplers.toReadableHexString
-import org.junit.Assert.assertEquals
+import org.junit.Assert.*
 import org.junit.Test
 import java.io.ByteArrayOutputStream
 
@@ -16,7 +17,7 @@ class RecordTest {
         val binary = (Hex.CHIMMER_MOD_HEADER + Hex.IRON_SWORD_WEAPON_GROUP).replace(" ", "")
 
         // When we parse the record header from it
-        val result = Record.parseTes4(binary.fromHexStringToByteList())
+        val result = Record.parseTes4("Wibble.esp", binary.fromHexStringToByteList())
 
         // Then we should get back one record  with all the relevant subrecords in
         val record = result.parsed
@@ -40,7 +41,7 @@ class RecordTest {
         val rest = "0E FF BB DD"
 
         // When we get the record from it
-        val result = Record.parseAll((hex + rest).fromHexStringToByteList(), listOf("Skyrim.esm"), ::fakeConsistencyRecorder)
+        val result = Record.parseAll("Wibble.esp", (hex + rest).fromHexStringToByteList(), listOf("Skyrim.esm"))
 
         // Then we should have back a record of type "WEAP"
         assertEquals("WEAP", result.parsed[0].type)
@@ -53,58 +54,137 @@ class RecordTest {
     fun `should render itself and its subrecords as bytes on request`() {
         // Given a record containing an iron sword
         val hex = Hex.IRON_SWORD_WEAPON
-        val record = Record.parseAll(hex.fromHexStringToByteList(), listOf("Skyrim.esm"), ::fakeConsistencyRecorder).parsed[0]
+        val masters = listOf("Skyrim.esm")
+        val record = Record.parseAll("Wibble.esp", hex.fromHexStringToByteList(), masters).parsed[0]
 
         // When we turn it back into bytes
 
         val rendered = ByteArrayOutputStream()
-        record.renderTo({ rendered.write(it) }, listOf("Skyrim.esm"))
+        record.render(masters, ::fakeConsistencyRecorder){ rendered.write(it) }
 
         // Then we should have the bytes back again identically
         assertEquals(hex, rendered.toByteArray().toReadableHexString())
     }
 
     @Test
-    fun `should be able to copy itself as new, looking up any existing form id in the consistency accessor where appropriate`() {
+    fun `should look up any existing form id in the consistency accessor where appropriate`() {
 
         // Given a record containing an iron sword
         // And a new sword that was generated last time with a new EDID that was tracked for consistency
-        val unindexedFormId = "00ABCD".fromHexStringToByteList().toLittleEndianInt()
         val consistencyRecorder: ConsistencyRecorder = {
-            if (it == "MY_MOD_Editor_Id_123456") {
-                unindexedFormId
-            } else throw IllegalArgumentException("This will not happen in this test code.")
+            if (it == "MY_MOD_Editor_Id_123456") "00ABCD".fromHexStringToByteList().toLittleEndianUInt()
+            else throw IllegalArgumentException("This will not happen in this test code.")
         }
 
         val hex = Hex.IRON_SWORD_WEAPON
-        val record = Record.parseAll(hex.fromHexStringToByteList(), listOf("Skyrim.esm"), consistencyRecorder).parsed[0]
+        val record = Record.parseAll("Wibble.esp", hex.fromHexStringToByteList(), listOf("Skyrim.esm")).parsed[0]
 
-        // When we copy the record with a new editor id as new
-        val newRecord = record.with(Subrecord("EDID", "MY_MOD_Editor_Id_123456\u0000".toByteList()))
-                .copyAsNew("MyMod.esp")
+        // When we copy the record as new
+        val newRecord = record.with(Subrecord("EDID", "MY_MOD_Editor_Id_123456\u0000".toByteList())).copyAsNew()
 
-        // Then the form Id should have the unindexed id from the consistency file
-        // and the new master
-        assertEquals(unindexedFormId, newRecord.formId.unindexFormId)
-        assertEquals("MyMod.esp", newRecord.formId.master)
+        // Then the raw should show that it's new
+        assertTrue(newRecord.isNew())
+        assertEquals("FFFFFFFF", newRecord.formId.toBigEndianHexString())
+
+        // But it should still have the original masters
+        assertEquals(listOf("Skyrim.esm"), newRecord.masters)
+
+        // When we render the bytes out with a new masterlist
+        val byteArray = ByteArrayOutputStream()
+        newRecord.render(listOf("Skyrim.esm", "Dawnguard.esm"), consistencyRecorder) {byteArray.write(it)}
+
+        // And load it back again
+        val parsedRecord = Record.parseAll("Wibble.esp",
+                byteArray.toByteArray().toList(),
+                listOf("Skyrim.esm", "Dawnguard.esm")).parsed[0]
+
+        // Then the form Id should be the newRecord but with an index of 02
+        assertEquals("02CDAB00", parsedRecord.formId.toBigEndianHexString())
     }
 
     @Test
-    fun `should add the masters to the TES4 record on saving`() {
-        // Given a TES4 record
-        val binary = Hex.CHIMMER_MOD_HEADER.fromHexStringToByteList()
-        val tes4 = Record.parseTes4(binary).parsed
+    fun `should be able to replace subrecords`() {
+        // Given a record containing an iron sword
+        val hex = Hex.IRON_SWORD_WEAPON
+        val record = Record.parseAll("Wibble.esp", hex.fromHexStringToByteList(), listOf("Skyrim.esm")).parsed[0]
 
-        // When we ask it to render itself with a new masterlist
-        val rendered = ByteArrayOutputStream()
-        val masters = listOf("Skyrim.esm", "MyMod.esp")
-        tes4.renderTo({rendered.write(it)}, masters)
+        // When we change the EDID record
+        val changedRecord = record.with(Subrecord("EDID", "MY_MOD_Editor_Id_123456\u0000".toByteList()))
 
-        // Then it should have added the masters to the byte code
-        val reloadedTes4 = Record.parseTes4(rendered.toByteArray().toList()).parsed
+        // Then it should be a copy but with the new EDID field.
+        assertEquals("MY_MOD_Editor_Id_123456", changedRecord.find("EDID")?.asString())
+    }
 
-        assertEquals(masters, reloadedTes4.masters)
+    @Test
+    fun `should convert its own FormId for a new masterlist`() {
+        // Given a record containing an iron sword
+        val hex = Hex.IRON_SWORD_WEAPON
+        val record = Record.parseAll("Wibble.esp", hex.fromHexStringToByteList(), listOf("Skyrim.esm")).parsed[0]
 
+        // When we ask it to render with a new list of masters
+        val byteArray = ByteArrayOutputStream()
+        record.render(listOf("Whatever.esm", "Skyrim.esm"), ::fakeConsistencyRecorder) {byteArray.write(it)}
+
+        // Then it should render its form id with a new index to represent its place in that masterlist
+        val renderedHex = byteArray.toByteArray().toReadableHexString()
+
+        // (LittleEndian byte, so the index appears at the end of the hex)
+        assertEquals(hex.replace("B7 2E 01 00", "B7 2E 01 01"), renderedHex)
+    }
+
+    @Test
+    fun `should find its originating mod in a masterlist of merged mods and use that as a master`() {
+        // Given a record containing an iron sword
+        val hex = Hex.IRON_SWORD_WEAPON
+        val record = Record.parseAll("IronSword.esp", hex.fromHexStringToByteList(), listOf("Skyrim.esm")).parsed[0]
+
+        // That's been copied as a new object to the new mod (so it has no master yet)
+        // (Note that saving and reloading through Chimmer gives it the name of the mod that it's being loaded with;
+        // note also that the masterlist here refers to internals of the Iron Sword and not the origin any more)
+        val newFormId = FormId(0x01abcdefu, listOf("Skyrim.esm"))
+        val newRecord = record.copy(formId = newFormId, loadingMod = "IronSword.esp")
+
+        // When we ask it to render with a new list of masters that contains its own origin
+        val byteArray = ByteArrayOutputStream()
+        newRecord.render(listOf("Whatever.esm", "IronSword.esp"), ::fakeConsistencyRecorder) {byteArray.write(it)}
+
+        // Then it should render its form id with a new index to represent its place in that masterlist
+        val renderedHex = byteArray.toByteArray().toReadableHexString()
+
+        // (LittleEndian byte, so the index appears at the end of the hex, and we changed the form id)
+        assertEquals(hex.replace("B7 2E 01 00", "EF CD AB 01"), renderedHex)
+    }
+
+    @Test
+    fun `should throw an exception if its master is not found in the list of mods`() {
+        // Given a record containing an iron sword
+        val hex = Hex.IRON_SWORD_WEAPON
+        val record = Record.parseAll("IronSword.esp", hex.fromHexStringToByteList(), listOf("Skyrim.esm")).parsed[0]
+
+        // When we ask it to render with a new list of masters that does not contain its origin
+        // Then it should throw an IllegalArgumentException
+        try {
+            record.render(listOf("Whatever.esm", "Another.esp"), ::fakeConsistencyRecorder) {  }
+            fail()
+        } catch (e : IllegalArgumentException) {
+            // expected
+        }
+    }
+
+    @Test
+    fun `should include new master files in any TES4 header render`() {
+        // Given a TES4 record with the usual subrecords (and no master / data pairs)
+        val tes4 = Record.parseTes4("MyMod.esp", Hex.CHIMMER_MOD_HEADER.fromHexStringToByteList()).parsed
+
+        // When we render it with a list of new masters
+        val bytes = ByteArrayOutputStream()
+        val newMasters = "Skyrim.esm, Dawnguard.esm, AnotherMod.esp".split(", ")
+        tes4.render(newMasters, {throw Exception("Not used")}, {bytes.write(it)})
+
+        // Then they should also be parsed in (which we can tell by reloading the header).
+        val renderedTes4 = Record.parseTes4("MyMod.esp", bytes.toByteArray().toList()).parsed
+
+        assertEquals(newMasters, renderedTes4.masters)
     }
 }
 

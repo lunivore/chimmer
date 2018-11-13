@@ -10,20 +10,14 @@ data class Mod(val name: String, private val modBinary: ModBinary) {
     val weapons: List<Weapon>
         get() = modBinary.find("WEAP")?.map { Weapon(it) } ?: listOf()
 
-    fun renderTo(renderer: (ByteArray) -> Unit, masterList: List<String>) {
-        modBinary.renderTo(renderer, masterList)
+    val masters: Set<String>
+        get() = modBinary.masters
+
+    fun renderTo(loadOrderForMasters: List<ModFilename>, consistencyRecorder: ConsistencyRecorder, renderer: (ByteArray) -> Unit) {
+        modBinary.render(loadOrderForMasters, consistencyRecorder, renderer)
     }
 
     fun withWeapons(weapons: List<Weapon>): Mod {
         return Mod(name, modBinary.createOrReplaceGrup("WEAP", weapons))
     }
-}
-
-fun List<Mod>.weapons(predicate: (Weapon) -> Boolean): List<Weapon> {
-    return this.fold(mutableMapOf<FormId, Weapon>()) {acc, mod ->
-        mod.weapons.filter(predicate).forEach {
-            acc.put(it.formId(), it)
-        }
-        acc
-    }.values.toList()
 }

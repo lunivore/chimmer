@@ -2,12 +2,16 @@ package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.ConsistencyRecorder
 
+/**
+ * See: https://en.uesp.net/wiki/Tes5Mod:Mod_File_Format#Groups
+ */
+@UseExperimental(ExperimentalUnsignedTypes::class)
 data class Grup(val type: String, val headerBytes: List<Byte>, val records: List<Record>) : List<Record> by records {
 
     companion object {
         val EMPTY_HEADER_BYTES = ByteArray(12).toList()
 
-        fun parseAll(bytes: List<Byte>, masters: List<String>, consistencyRecorder: ConsistencyRecorder): List<Grup> {
+        fun parseAll(loadingMod: String, bytes: List<Byte>, masters: List<String>): List<Grup> {
 
             val grups = mutableListOf<Grup>()
             var rest = bytes
@@ -22,7 +26,7 @@ data class Grup(val type: String, val headerBytes: List<Byte>, val records: List
 
                 Record.logger.debug("Found Grup $type with length $grupLength")
 
-                val grup = Grup(type, grupHeaderBytes, recordBytes, masters, consistencyRecorder)
+                val grup = Grup(loadingMod, type, grupHeaderBytes, recordBytes, masters)
 
                 grups.add(grup)
             }
@@ -31,14 +35,13 @@ data class Grup(val type: String, val headerBytes: List<Byte>, val records: List
 
     }
 
-    constructor(type: String, headerBytes: List<Byte>, records: List<Byte>, masters: List<String>,
-                consistencyRecorder: ConsistencyRecorder) :
-            this(type, headerBytes, Record.parseAll(records, masters, consistencyRecorder).parsed)
+    constructor(loadingMod: String, type: String, headerBytes: List<Byte>, records: List<Byte>, masters: List<String>) :
+            this(type, headerBytes, Record.parseAll(loadingMod, records, masters).parsed)
 
-    fun renderTo(renderer: (ByteArray) -> Unit, masterList: List<String>) {
+    fun render(masters: List<String>, consistencyRecorder : ConsistencyRecorder, renderer: (ByteArray) -> Unit) {
 
         var lengthOfRecords = 0
-        forEach { it.renderTo({ lengthOfRecords += it.size }, masterList) }
+        forEach { it.render(masters, consistencyRecorder) { lengthOfRecords += it.size } }
 
         val lengthIncludingGroupHeader = 24 + lengthOfRecords
 
@@ -46,7 +49,7 @@ data class Grup(val type: String, val headerBytes: List<Byte>, val records: List
         renderer(lengthIncludingGroupHeader.toLittleEndianBytes())
         renderer(type.toByteArray())
         renderer(headerBytes.toByteArray())
-        forEach { it.renderTo(renderer, masterList) }
+        forEach { it.render(masters, consistencyRecorder, renderer) }
     }
 
     fun isType(type: String): Boolean {

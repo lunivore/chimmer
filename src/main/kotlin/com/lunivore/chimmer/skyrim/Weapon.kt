@@ -1,10 +1,10 @@
 package com.lunivore.chimmer.skyrim
 
 import com.lunivore.chimmer.binary.Record
-import com.lunivore.chimmer.binary.RecordWrapper
 
-data class Weapon(override val record: Record) : RecordWrapper<Weapon> {
+data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
 
-    val name: String = record.find("CNAM")?.asString() ?: ""
-
+    override fun create(record: Record): Weapon {
+        return Weapon(record)
+    }
 }

@@ -10,12 +10,12 @@ import java.io.ByteArrayOutputStream
 class GrupTest {
 
     @Test
-    fun `should parse all groups and the records of any we're interested in from bytes`() {
+    fun `should parse all groups and the records of any mods we're interested in from bytes`() {
         // Given some groups, some of which we're interested in
         val hex = Hex.IRON_SWORD_WEAPON_GROUP + Hex.UNINTERESTING_COLOUR_GROUP
 
-        // When we parseAll the group
-        val grups = Grup.parseAll(hex.fromHexStringToByteList(), listOf("Skyrim.esm"), ::fakeConsistencyRecorder)
+        // When we parse the group
+        val grups = Grup.parseAll("Wibble.esp", hex.fromHexStringToByteList(), listOf("Skyrim.esm"))
 
         // Then we should be able to get the top-level records from it
         val weaponGrup = grups.first()
@@ -31,11 +31,11 @@ class GrupTest {
         val recordHex = Hex.IRON_SWORD_WEAPON + " " + Hex.CROSSBOW_WEAPON
         val recordBytes = recordHex.fromHexStringToByteList()
         val masters = listOf("Skyrim.esm", "Dawnguard.esm")
-        val grup = Grup("WEAP", groupHeaderBytes, Record.parseAll(recordBytes, masters, ::fakeConsistencyRecorder).parsed)
+        val grup = Grup("WEAP", groupHeaderBytes, Record.parseAll("Wibble.esp", recordBytes, masters).parsed)
 
         // When we render the group back to bytes again
         val renderer = ByteArrayOutputStream()
-        grup.renderTo({ renderer.write(it) }, masters)
+        grup.render(masters, ::fakeConsistencyRecorder) { renderer.write(it) }
 
         // Then it should contain the same bytes as the original
         val result = renderer.toByteArray()

@@ -1,13 +1,16 @@
 package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.ConsistencyRecorder
-import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.binary.Record.Companion.consistencyRecorderForTes4
+import com.lunivore.chimmer.skyrim.FormId
 
 
+// TODO: Recalculate next available object id (highest + 1024), number of records and groups, and the masterlist.
+
+@UseExperimental(ExperimentalUnsignedTypes::class)
 data class ModBinary(val header: Record, val grups: List<Grup>) : List<Grup> by grups {
     companion object {
-        private val OLDRIM_VERSION = 43
+        private val OLDRIM_VERSION = 43.toUShort()
         private val GRUP_ORDER = fromCommaDelimitedToList("""
             GMST, KYWD, LCRT, AACT, TXST, GLOB, CLAS, FACT,
             HDPT, HAIR, EYES, RACE, SOUN, ASPC, MGEF, SCPT,
@@ -29,36 +32,51 @@ data class ModBinary(val header: Record, val grups: List<Grup>) : List<Grup> by 
         private fun fromCommaDelimitedToList(grupList: String) =
                 grupList.lines().joinToString("").split(",").map {it.trim()}
 
-        fun parse(bytes: ByteArray, consistencyRecorder: ConsistencyRecorder): ModBinary {
+        fun parse(loadingMod: String, bytes: ByteArray): ModBinary {
 
-            val result = Record.parseTes4(bytes.toList())
+            val result = Record.parseTes4(loadingMod, bytes.toList())
 
             val headerRecord = result.parsed
-            val grups = Grup.parseAll(result.rest, headerRecord.masters, consistencyRecorder)
+            val grups = Grup.parseAll(loadingMod, result.rest, headerRecord.masters)
 
             return ModBinary(headerRecord, grups)
         }
 
-        fun create(modName: String, accessor: ConsistencyRecorder): ModBinary {
+        fun create(): ModBinary {
             val tes4subrecords = listOf(
                     Subrecord("HEDR", listOf(
                             1.7f.toLittleEndianBytes().toList(),
                             0.toLittleEndianBytes().toList(),
                             1024.toLittleEndianBytes().toList()).flatten()),
-                    Subrecord("CNAM", "Chimmer\u0000".toByteList()),
-                    Subrecord("SNAM", "\u0000".toByteList()))
+                    Subrecord("CNAM", "Chimmer\u0000".toByteArray().toList()),
+                    Subrecord("SNAM", "\u0000".toByteArray().toList()))
 
-            // Note that we're not adding the masterlist here; it needs to be derived when we're ready to save.
-
-            val tes4 = Record("TES4", 0, FormId.TES4, OLDRIM_VERSION, tes4subrecords, listOf(modName),
-                    consistencyRecorderForTes4)
+            val tes4 = Record(null, "TES4", 0u, FormId(0u, listOf()), OLDRIM_VERSION, tes4subrecords, listOf())
             return ModBinary(tes4, listOf())
         }
     }
 
-    fun renderTo(renderer: (ByteArray) -> Unit, masterList: List<String>) {
-        header.renderTo(renderer, masterList)
-        grups.forEach { it.renderTo(renderer, masterList) }
+    val masters: Set<String>
+        get() {
+            val mastersOfRecords = grups.flatMap { it.records.flatMap { it.masters } }
+            val originsWhereNoMasters = grups.flatMap {
+                it.records.flatMap {
+                    if (it.formId.master == null) listOf(it.loadingMod) else listOf<String>()
+                }
+            }
+            val mastersToUse = (mastersOfRecords + originsWhereNoMasters).filterNot { it.isNullOrEmpty() }.map { it!! }.toSet()
+            return mastersToUse
+        }
+
+    fun render(loadOrderForMasters: List<String>, consistencyRecorder: ConsistencyRecorder, renderer: (ByteArray) -> Unit) {
+
+        val mastersToUse = masters
+        val orderedMasters = loadOrderForMasters.filter { mastersToUse.contains(it) }.plus(
+                mastersToUse.filter { !loadOrderForMasters.contains(it) }
+        )
+
+        header.render(orderedMasters, consistencyRecorderForTes4, renderer)
+        grups.forEach { it.render(loadOrderForMasters, consistencyRecorder, renderer) }
     }
 
     fun <T : RecordWrapper<T>> createOrReplaceGrup(type: String, recordWrappers: List<T>): ModBinary {

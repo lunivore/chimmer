@@ -2,22 +2,26 @@ package com.lunivore.chimmer
 
 import com.lunivore.chimmer.binary.fromHexStringToByteList
 import com.lunivore.chimmer.binary.toLittleEndianBytes
-import com.lunivore.chimmer.binary.toLittleEndianInt
+import com.lunivore.chimmer.binary.toLittleEndianUInt
 import java.io.File
 
 typealias ModFilename = String
 typealias NamingConvention = (ModFilename) -> File
 typealias EditorId = String
-typealias UnindexedFormId = Int
+typealias UnindexedFormId = UInt
 typealias ConsistencyRecorder = (EditorId) -> UnindexedFormId
 typealias MapForMod = MutableMap<EditorId, UnindexedFormId>
 
+@UseExperimental(ExperimentalUnsignedTypes::class)
 class ConsistencyFileHandler(private val workingDirectory : File,
                              private val namingConvention: NamingConvention
                                 = { File(workingDirectory, "chimmer/${it}_consistency.txt") }) {
 
     private val mapsForMods : MutableMap<ModFilename, MapForMod> = mutableMapOf()
-    private var lastUsedId: Int = 2047
+
+    // TODO: This needs to be a constant, and then the dynamic one needs to exist per mod.
+    // But we need to do a bunch of work around the last used record anyway.
+    private var lastUsedId: UInt = 2047u
 
     private fun findOrCreate(modFilename : ModFilename, editorId: EditorId): UnindexedFormId {
         val mapForMod = mapsForMods[modFilename] ?: mutableMapOf()
@@ -25,7 +29,7 @@ class ConsistencyFileHandler(private val workingDirectory : File,
 
         val formId = mapForMod[editorId]
         return if (formId == null) {
-            val nextId = lastUsedId + 1
+            val nextId = lastUsedId + 1u
             mapForMod[editorId] = nextId
             lastUsedId = nextId
             nextId }
@@ -41,24 +45,24 @@ class ConsistencyFileHandler(private val workingDirectory : File,
         val file = namingConvention(modFilename)
         if (file.exists()) {
             val pairLines = file.readLines()
-            val splitLines: List<Pair<String, Int>> = pairLines.map {
+            val splitLines: List<Pair<String, UInt>> = pairLines.map {
                 it.split(":")
-            }.map { Pair(it[0], it[1].fromHexStringToByteList().toLittleEndianInt() ) }
+            }.map { Pair(it[0], it[1].fromHexStringToByteList().toLittleEndianUInt() ) }
             mapForMod.putAll(splitLines)
-            lastUsedId = splitLines.lastOrNull()?.second ?: 2047
+            lastUsedId = splitLines.lastOrNull()?.second ?: 2047u
         }
         return { findOrCreate(modFilename, it) }
     }
 
     fun saveConsistency(modFilename: ModFilename) {
         val file = namingConvention(modFilename)
-        if (!file.parentFile.exists()) { file.parentFile.mkdir() }
+        if (!file.parentFile.exists()) { file.parentFile.mkdirs() }
         file.createNewFile()
 
         val mapForMod = mapsForMods[modFilename] ?: mutableMapOf()
         mapForMod.forEach {
-            file.writeText("${it.key}:${String(it.value.toLittleEndianBytes())} ) ")
-            file.writeText(System.lineSeparator())
+            file.appendText("${it.key}:${String(it.value.toLittleEndianBytes()).subSequence(1, 3)}")
+            file.appendText(System.lineSeparator())
         }
     }
 

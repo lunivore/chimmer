@@ -20,7 +20,7 @@ class SubrecordTest {
         val parseResult = Subrecord.parse((field + rest).fromHexStringToByteList())
         val subrecord = parseResult.parsed[0]
 
-        // Then it should read the type from the first four digits and parseAll the length appropriately
+        // Then it should read the type from the first four digits and parse the length appropriately
         assertEquals("EDID", subrecord.type)
 
         // When we render it back to bytes
