@@ -1,6 +1,5 @@
 package com.lunivore.chimmer
 
-import com.lunivore.chimmer.binary.Subrecord
 import com.lunivore.chimmer.binary.toLittleEndianBytes
 
 @ExperimentalUnsignedTypes

@@ -7,7 +7,6 @@ import com.lunivore.chimmer.binary.fromHexStringToByteList
 import com.lunivore.chimmer.testheplers.Hex
 import com.lunivore.chimmer.testheplers.toReadableHexString
 import org.junit.Assert.assertEquals
-import org.junit.Assert.fail
 import org.junit.Test
 
 @UseExperimental(ExperimentalUnsignedTypes::class)

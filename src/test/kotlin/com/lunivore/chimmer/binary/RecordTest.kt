@@ -7,7 +7,6 @@ import com.lunivore.chimmer.testheplers.fakeConsistencyRecorder
 import com.lunivore.chimmer.testheplers.toReadableHexString
 import org.junit.Assert.*
 import org.junit.Test
-import org.mockito.Mockito.*
 import java.io.ByteArrayOutputStream
 
 @UseExperimental(ExperimentalUnsignedTypes::class)
