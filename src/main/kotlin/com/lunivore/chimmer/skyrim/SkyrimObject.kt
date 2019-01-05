@@ -16,5 +16,5 @@ abstract class SkyrimObject<T : RecordWrapper<T>>(override val record: Record) :
         get() = record.formId
 
     override val loadingMod: String?
-        get() = record.loadingMod
+        get() = record.formId.loadingMod
 }

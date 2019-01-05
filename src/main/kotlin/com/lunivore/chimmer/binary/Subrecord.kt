@@ -2,7 +2,8 @@ package com.lunivore.chimmer.binary
 
 import org.apache.logging.log4j.LogManager
 
-class Subrecord(val type: String, val bytes: List<Byte>) {
+@UseExperimental(ExperimentalUnsignedTypes::class)
+data class Subrecord(val type: String, val bytes: List<Byte>) {
     fun renderTo(renderer: (ByteArray) -> Unit) {
         renderer(type.toByteArray())
         renderer(bytes.size.toShort().toLittleEndianBytes())

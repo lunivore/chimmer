@@ -72,4 +72,44 @@ class SynchronizingFormIdsAndMasterFiles() {
         assertEquals(modName1, formIds[0].master)
         assertEquals(modName2, formIds[1].master)
     }
+
+    @Test
+    fun `should change FormIds within an overridden record so that they match the new masterlist`() {
+        // Given a mod with an Iron Sword in it and another with a crossbow
+        val plugins = listOf("Skyrim.esm", "Dawnguard.esm", "IronSword.esp", "ArmorBootsSwordCrossbow.esp", "MiscellaneousKeyword.esp")
+        val modDirectory = asResourceFile("plugins.txt").parentFile
+        var chimmer = Chimmer(outputFolder.root)
+        val mods = chimmer.load(modDirectory, plugins, false)
+
+        // When we add the crossbow, then the sword with a keyword from another mod and save it as a new mod
+        // (we need to add the crossbow to force update the ids)
+        val oldSword = mods[0].weapons.first()
+        val crossbow = mods[1].weapons[1]
+
+        val keywordToAdd = mods[2].keywords.first().formId
+        val newSword = oldSword.copyAsNew().plusKeyword(keywordToAdd)
+
+        val newModName = "NewMod_${System.currentTimeMillis()}.esp"
+        val newMod = chimmer.createMod(newModName).withWeapons(listOf(crossbow, newSword))
+
+        chimmer.save(newMod)
+
+        // And reload it along with Dawnguard (we need to copy the old mods to the new folder too)
+        File(modDirectory, "IronSword.esp").copyTo(File(outputFolder.root, "IronSword.esp"))
+        File(modDirectory, "MiscellaneousKeyword.esp").copyTo(File(outputFolder.root, "MiscellaneousKeyword.esp"))
+
+        val newModList = listOf("Skyrim.esm", "Dawnguard.esm", "IronSword.esp", "MiscellaneousKeyword.esp", newModName)
+        chimmer = Chimmer(outputFolder.root)
+        val reloadedMods = chimmer.load(outputFolder.root, newModList, false)
+
+        // Then the keyword should be updated to reflect the position in the new masterlist
+        // (Remember we don't actually load Skyrim or Dawnguard!)
+        val expectedKeyword = FormId(newModName, 0x01000000u or keywordToAdd.unindexed, listOf("Skyrim.esm", "Dawnguard.esm", "MiscellaneousKeyword.esp"))
+        val reloadedSword = reloadedMods[2].weapons[1]
+        val actualKeyword = reloadedSword.keywords[3]
+
+        // (This first line is just easier to read if it goes wrong)
+        assertEquals(expectedKeyword.toBigEndianHexString(), actualKeyword.toBigEndianHexString())
+        assertEquals(expectedKeyword, actualKeyword)
+    }
 }

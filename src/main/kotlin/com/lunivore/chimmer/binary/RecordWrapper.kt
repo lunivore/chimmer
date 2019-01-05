@@ -6,7 +6,6 @@ import com.lunivore.chimmer.FormId
 interface RecordWrapper<T : RecordWrapper<T>> {
 
     fun copyAsNew(): T
-
     val formId: FormId
     val record: Record
     val loadingMod: String?

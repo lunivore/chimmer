@@ -7,8 +7,10 @@ import com.lunivore.chimmer.testheplers.fakeConsistencyRecorder
 import com.lunivore.chimmer.testheplers.toReadableHexString
 import org.junit.Assert.*
 import org.junit.Test
+import org.mockito.Mockito.*
 import java.io.ByteArrayOutputStream
 
+@UseExperimental(ExperimentalUnsignedTypes::class)
 class RecordTest {
 
     @Test
@@ -126,10 +128,11 @@ class RecordTest {
         record.render(listOf("Whatever.esm", "Skyrim.esm"), ::fakeConsistencyRecorder) {byteArray.write(it)}
 
         // Then it should render its form id with a new index to represent its place in that masterlist
-        val renderedHex = byteArray.toByteArray().toReadableHexString()
+        val renderedHex = byteArray.toByteArray()
 
-        // (LittleEndian byte, so the index appears at the end of the hex)
-        assertEquals(hex.replace("B7 2E 01 00", "B7 2E 01 01"), renderedHex)
+        val newRecord = Record.parseAll("Wibble.esp", renderedHex.toList(), listOf("Skyrim.esm")).parsed[0]
+        assertEquals(FormId("Wibble.esp", 0x01000000u or record.formId.unindexed, listOf("Skyrim.esm")),
+                newRecord.formId)
     }
 
     @Test
@@ -141,12 +144,12 @@ class RecordTest {
         // That's been copied as a new object to the new mod (so it has no master yet)
         // (Note that saving and reloading through Chimmer gives it the name of the mod that it's being loaded with;
         // note also that the masterlist here refers to internals of the Iron Sword and not the origin any more)
-        val newFormId = FormId(0x01abcdefu, listOf("Skyrim.esm"))
-        val newRecord = record.copy(formId = newFormId, loadingMod = "IronSword.esp")
+        val newFormId = FormId("IronSword.esp", 0x01abcdefu, listOf("Skyrim.esm"))
+        val newRecord = record.copy(formId = newFormId)
 
         // When we ask it to render with a new list of masters that contains its own origin
         val byteArray = ByteArrayOutputStream()
-        newRecord.render(listOf("Whatever.esm", "IronSword.esp"), ::fakeConsistencyRecorder) {byteArray.write(it)}
+        newRecord.render(listOf("Skyrim.esm", "IronSword.esp"), ::fakeConsistencyRecorder) {byteArray.write(it)}
 
         // Then it should render its form id with a new index to represent its place in that masterlist
         val renderedHex = byteArray.toByteArray().toReadableHexString()

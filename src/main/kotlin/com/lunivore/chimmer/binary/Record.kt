@@ -17,7 +17,7 @@ import javax.xml.bind.DatatypeConverter
  * See http://en.uesp.net/wiki/Tes5Mod:Mod_File_Format#Records
  */
 @ExperimentalUnsignedTypes
-data class Record(val loadingMod: String?, val type: String, val flags: UInt, val formId: FormId, val formVersion: UShort, val subrecords: List<Subrecord>,
+data class Record(val type: String, val flags: UInt, val formId: FormId, val formVersion: UShort, val subrecords: List<Subrecord>,
                   val masters: List<String>)
     : List<Subrecord> by subrecords {
 
@@ -33,7 +33,7 @@ data class Record(val loadingMod: String?, val type: String, val flags: UInt, va
         }
 
         fun parseTes4(modName: String, bytes: List<Byte>): ParseResult<Record> {
-            val (headerBytes, subrecordResult, rest) = parseDataForType("TES4", bytes)
+            val (headerBytes, subrecordResult, rest) = parseDataForType("TES4", bytes, listOf())
             val masters = findMastersForTes4HeaderRecordOnly(subrecordResult.parsed)
 
             return ParseResult(Record(modName, headerBytes, subrecordResult.parsed, masters), rest)
@@ -48,7 +48,7 @@ data class Record(val loadingMod: String?, val type: String, val flags: UInt, va
 
             while (startsWithRecordType(rest, type)) {
 
-                val (headerBytes, subrecordResult, newRest) = parseDataForType(type, rest)
+                val (headerBytes, subrecordResult, newRest) = parseDataForType(type, rest, masters)
                 rest = newRest
 
                 records.add(Record(modName, headerBytes, subrecordResult.parsed, masters))
@@ -56,7 +56,7 @@ data class Record(val loadingMod: String?, val type: String, val flags: UInt, va
             return ParseResult(records, rest)
         }
 
-        private fun parseDataForType(type: String, bytes: List<Byte>):
+        private fun parseDataForType(type: String, bytes: List<Byte>, masters: List<String>):
                 Triple<List<Byte>, ParseResult<List<Subrecord>>, List<Byte>> {
 
             // As well as the mod having a header, each record has a header too.
@@ -104,9 +104,9 @@ data class Record(val loadingMod: String?, val type: String, val flags: UInt, va
     constructor(modName : String, headerBytes: List<Byte>, subrecords: List<Subrecord>, masters: List<String>) :
             // We discard everything else in the Record header as it's either never used
             // or we'll derive it (e.g.: data size).
-            this(modName, String(headerBytes.subList(0, 4).toByteArray()), // Type
+            this(String(headerBytes.subList(0, 4).toByteArray()), // Type
                     headerBytes.subList(8, 12).toLittleEndianUInt(),  // Flags
-                    FormId(headerBytes.subList(12, 16).toLittleEndianUInt(), masters),  // FormId (indexed to given masters)
+                    FormId(modName, headerBytes.subList(12, 16).toLittleEndianUInt(), masters),  // FormId (indexed to given masters)
                     headerBytes.subList(20, 22).toLittleEndianUShort(), // Version; Oldrim = 43, SSE = 44
                     subrecords, masters)
 
@@ -131,6 +131,7 @@ data class Record(val loadingMod: String?, val type: String, val flags: UInt, va
         renderer(REVISION_FIELD_IN_RECORD_HEADER.toLittleEndianBytes())
         renderer(formVersion.toLittleEndianBytes())
         renderer(UNKNOWN_FIELDS_IN_RECORD_HEADER.toLittleEndianBytes())
+
         subrecordsToRender.forEach { it.renderTo(renderer) }
     }
 
@@ -158,10 +159,26 @@ data class Record(val loadingMod: String?, val type: String, val flags: UInt, va
     }
 
     private fun reindexForNewMasters(newMasters: List<String>): UInt {
-        val master = formId.master ?: loadingMod
+        val master = formId.master
         val newMasterIndex = if (master == null) newMasters.size else newMasters.indexOf(master)
         if (newMasterIndex == -1) { throw IllegalArgumentException("The master $master was not found in the masterlist $newMasters.") }
         return (newMasterIndex.toUInt() shl 24) + formId.unindexed
+    }
+
+
+
+    fun copyAsNew(): Record {
+        return copy(formId = FormId.createNew(masters))
+
+    }
+
+    fun with(newSubrecord: Subrecord): Record {
+        val newSubrecords = map { if (it.type == newSubrecord.type) newSubrecord else it }
+        return copy(subrecords = newSubrecords)
+    }
+
+    fun isNew(): Boolean {
+        return formId.isNew()
     }
 
     /**
@@ -170,20 +187,5 @@ data class Record(val loadingMod: String?, val type: String, val flags: UInt, va
     fun find(type: String): Subrecord? {
         return find { it.type == type }
     }
-
-    fun copyAsNew(): Record {
-        return copy(loadingMod = null, formId = FormId.createNew(masters))
-
-    }
-
-    fun with(newSubrecord: Subrecord): Record {
-        val subrecords = map { if (it.type == newSubrecord.type) newSubrecord else it }
-        return copy(subrecords = subrecords)
-    }
-
-    fun isNew(): Boolean {
-        return formId.isNew()
-    }
-
 
 }

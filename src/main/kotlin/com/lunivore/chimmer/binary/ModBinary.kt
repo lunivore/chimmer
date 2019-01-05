@@ -51,21 +51,23 @@ data class ModBinary(val header: Record, val grups: List<Grup>) : List<Grup> by 
                     Subrecord("CNAM", "Chimmer\u0000".toByteArray().toList()),
                     Subrecord("SNAM", "\u0000".toByteArray().toList()))
 
-            val tes4 = Record(null, "TES4", 0u, FormId(0u, listOf()), OLDRIM_VERSION, tes4subrecords, listOf())
+            val tes4 = Record("TES4", 0u, FormId(null, 0u, listOf()), OLDRIM_VERSION, tes4subrecords, listOf())
             return ModBinary(tes4, listOf())
         }
     }
 
     val masters: Set<String>
         get() {
-            val mastersOfRecords = grups.flatMap { it.records.flatMap { it.masters } }
-            val originsWhereNoMasters = grups.flatMap {
-                it.records.flatMap {
-                    if (it.formId.master == null) listOf(it.loadingMod) else listOf<String>()
-                }
-            }
-            val mastersToUse = (mastersOfRecords + originsWhereNoMasters).filterNot { it.isNullOrEmpty() }.map { it!! }.toSet()
-            return mastersToUse
+            return grups.flatMap { it.records.flatMap { it.masters.plus(it.formId.master) } }.filterNot { it.isNullOrEmpty() }.map { it!! }.toSet()
+//
+//            val mastersOfRecords = grups.flatMap { it.records.flatMap { it.masters.plus(it.formId.master) } }
+//            val originsWhereNoMasters = grups.flatMap {
+//                it.records.flatMap {
+//                    if (it.formId.master == null) listOf(it.formId.loadingMod) else listOf<String>()
+//                }
+//            }
+//            val mastersToUse = (mastersOfRecords + originsWhereNoMasters).filterNot { it.isNullOrEmpty() }.map { it!! }.toSet()
+//            return mastersToUse
         }
 
     fun render(loadOrderForMasters: List<String>, consistencyRecorder: ConsistencyRecorder, renderer: (ByteArray) -> Unit) {

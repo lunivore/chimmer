@@ -117,10 +117,10 @@ class ModBinaryTest {
 
         // Which is saved
         val firstBytes = ByteArrayOutputStream()
-        firstNewModBinary.render(listOf("Skyrim.esm"), { 0xabcdefu }) {firstBytes.write(it)}
+        val unindexedKeywordforNewSwordConsistency = 0xabcdefu
+        firstNewModBinary.render(listOf("Skyrim.esm"), { unindexedKeywordforNewSwordConsistency }) {firstBytes.write(it)}
 
         // Then reloaded, and the iron sword copied to another mod (taking its master from whatever it's loaded from)
-        // (NB: Skyrim.esm still needed; there's no way of knowing right now if the internals of a WEAP reference this)
         val originalFirstBinary = ModBinary.parse("MyMod.esp", firstBytes.toByteArray())
         val secondNewModBinary = ModBinary.create().copy(grups = listOf(originalFirstBinary.grups[0].copy(
                 records = listOf(originalFirstBinary.grups[0].records[0]) // Note not copying this as new
