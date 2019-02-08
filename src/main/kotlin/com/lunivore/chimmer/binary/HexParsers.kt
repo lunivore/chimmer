@@ -76,3 +76,13 @@ fun String.toByteList(): List<Byte> {
 fun String.fromHexStringToByteList(): List<Byte> {
     return DatatypeConverter.parseHexBinary(this.replace(" ", "")).toList()
 }
+
+fun ByteArray.toReadableHexString(): String {
+    return DatatypeConverter.printHexBinary(this).foldIndexed("") { i, string, char ->
+        string + char + (if (i % 2 > 0) " " else "")
+    }.trimEnd()
+}
+
+fun List<Byte>.toReadableHexString() = this.toByteArray().toReadableHexString()
+
+fun Subrecord.toReadableHexString() = this.bytes.toReadableHexString()

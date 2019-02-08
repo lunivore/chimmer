@@ -37,6 +37,7 @@ data class FormId(val loadingMod: String?, val raw: UInt, val masters: List<Stri
 
     private fun findMaster(): String? {
         val index = raw.and(0xff000000u).shr(24).toInt()
+
         return if (index == 0xff) null
             else if (index < masters.size) masters[index]
             else if (index == masters.size) loadingMod else

@@ -29,6 +29,19 @@ class SubrecordTest {
     }
 
     @Test
+    fun `should fail if hex is malformed`() {
+        // Given an EDID field with a length of 10 (0A 00 -> littleEndian so 00 0A = 10)
+        // but which has a couple of bytes removed (so it's too short)
+        val field = "45 44 49 44 0A 00 49 72 6F 6E 53 72 64 00"
+
+        // When we render a subrecord from the bytes
+        val parseResult = Subrecord.parse(field.fromHexStringToByteList())
+
+        // Then the parse result should be a failure
+        assertEquals(false, parseResult.succeeded)
+    }
+
+    @Test
     fun `should be able to turn contents into a string`() {
         // Given a CNAM record with content "Chimmer"
         val cnam = Subrecord("CNAM", "43 68 69 6D 6D 65 72 00".fromHexStringToByteList())

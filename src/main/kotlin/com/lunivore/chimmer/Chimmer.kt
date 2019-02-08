@@ -5,14 +5,32 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileNotFoundException
 
-class Chimmer(val outputFolder: File = File("."), private val consistencyFileHandler: ConsistencyFileHandler = ConsistencyFileHandler(outputFolder)) {
+class Chimmer(val outputFolder: File = File("."),
+              private val consistencyFileHandler: ConsistencyFileHandler = ConsistencyFileHandler(outputFolder),
+              private val skyrimFinder: SkyrimFinder = SkyrimFinder()) {
 
     companion object {
         val BETHESDA_FILES : List<String> =
                 "Skyrim.esm, Dawnguard.esm, Dragonborn.esm, Update.esm".split(", ")
+
+        val logger by Logging()
     }
 
     private var lastSeenLoadOrder: List<ModFilename> = listOf()
+
+
+
+    fun load(reallyLoadBethesdaFiles: Boolean): List<Mod> {
+        val skyrimFolder = skyrimFinder.findSkyrimFolder()
+        val modsFolder = File(skyrimFolder, "Data")
+        val pluginsTxtFile = skyrimFinder.findLoadOrderFile()
+
+        return load(modsFolder, pluginsTxtFile, reallyLoadBethesdaFiles)
+    }
+
+    fun load(modFolder: File, loadOrder: File, reallyLoadBethesdaFiles: Boolean): List<Mod> {
+        return load(modFolder, loadOrder.readLines(), reallyLoadBethesdaFiles)
+    }
 
     fun load(modFolder: File, loadOrderFile: File): List<Mod> {
         return load(modFolder, loadOrderFile.readLines())
@@ -23,13 +41,15 @@ class Chimmer(val outputFolder: File = File("."), private val consistencyFileHan
         if (!modFolder.exists()) {
             throw FileNotFoundException("Could not find mod folder '${modFolder.absolutePath}'")
         }
-        return loadOrder.filter { reallyLoadBethesdaFiles || !BETHESDA_FILES.contains(it) }
+
+        return loadOrder.filterNot { it.startsWith("#") }
+                .filter { reallyLoadBethesdaFiles || !BETHESDA_FILES.contains(it) }
                 .map {
             val matchingFiles = modFolder.listFiles { _, name -> name == it }
             if (matchingFiles.isEmpty()) {
                 throw FileNotFoundException("Could not find '$it' in folder '${modFolder.absolutePath}'")
             }
-
+            logger.info("Loading mod $it")
             Mod(it, ModBinary.parse(it, matchingFiles[0].readBytes()))
         }
     }

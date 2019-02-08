@@ -1,6 +1,7 @@
 package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.ConsistencyRecorder
+import com.lunivore.chimmer.Logging
 
 /**
  * See: https://en.uesp.net/wiki/Tes5Mod:Mod_File_Format#Groups
@@ -10,6 +11,7 @@ data class Grup(val type: String, val headerBytes: List<Byte>, val records: List
 
     companion object {
         val EMPTY_HEADER_BYTES = ByteArray(12).toList()
+        val logger by Logging()
 
         fun parseAll(loadingMod: String, bytes: List<Byte>, masters: List<String>): List<Grup> {
 
@@ -24,7 +26,7 @@ data class Grup(val type: String, val headerBytes: List<Byte>, val records: List
 
                 rest = if (rest.size >= grupLength) rest.subList(grupLength, rest.size) else listOf()
 
-                Record.logger.debug("Found Grup $type with length $grupLength")
+                logger.info("Found Grup $type with length $grupLength")
 
                 val grup = Grup(loadingMod, type, grupHeaderBytes, recordBytes, masters)
 

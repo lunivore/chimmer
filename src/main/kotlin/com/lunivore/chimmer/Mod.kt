@@ -2,6 +2,7 @@ package com.lunivore.chimmer
 
 import com.lunivore.chimmer.binary.ModBinary
 import com.lunivore.chimmer.skyrim.Keyword
+import com.lunivore.chimmer.skyrim.Npc
 import com.lunivore.chimmer.skyrim.Weapon
 
 // Note that this is a top-level class; tests / documentation
@@ -13,6 +14,9 @@ data class Mod(val name: String, private val modBinary: ModBinary) {
 
     val keywords: List<Keyword>
         get() = modBinary.find("KYWD")?.map { Keyword(it) } ?: listOf()
+
+    val npcs: List<Npc>
+        get() = modBinary.find("NPC_")?.map { Npc(it) } ?: listOf()
 
 
     val masters: Set<String>

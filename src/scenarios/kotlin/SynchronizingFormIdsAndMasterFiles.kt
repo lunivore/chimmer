@@ -1,7 +1,7 @@
 package com.lunivore.chimmer
 
 import com.lunivore.chimmer.binary.ModBinary
-import com.lunivore.chimmer.scenariohelpers.asResourceFile
+import com.lunivore.chimmer.testheplers.asResourceFile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -20,7 +20,7 @@ class SynchronizingFormIdsAndMasterFiles() {
         // Given a mod with Skyrim's iron sword and Dawnguard's crossbow as overrides
         val plugins = listOf("IronSword.esp", "ArmorBootsSwordCrossbow.esp")
         val modDirectory = asResourceFile("IronSword.esp").parentFile
-        val chimmer = Chimmer(outputFolder.root)
+        val chimmer = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder())
         val mods = chimmer.load(modDirectory, plugins)
         val newMod = chimmer.createMod("NewMod.esp").withWeapons(listOf(
                 mods[0].weapons[0],
@@ -36,11 +36,12 @@ class SynchronizingFormIdsAndMasterFiles() {
 
     @Test
     fun `should change the indexed FormId of an overridden record so that it matches the new masterlist`() {
+
         // Given two mods which both have an iron sword copied as a new record
-        val plugins = listOf("IronSword.esp")
+        val plugins = listOf("Skyrim.esm", "IronSword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
-        val chimmer = Chimmer(outputFolder.root)
-        var mods = chimmer.load(modDirectory, plugins)
+        val chimmer = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder())
+        var mods = chimmer.load(modDirectory, plugins, false)
 
         val sword1 = mods[0].weapons.first().copyAsNew()
         val modName1 = "IronSword1_${System.currentTimeMillis()}.esp"
@@ -54,11 +55,14 @@ class SynchronizingFormIdsAndMasterFiles() {
         chimmer.save(newMod2)
 
         // When we load them and merge those two weapons into one new mod which overrides them
-        val reloadedMods = chimmer.load(outputFolder.root, listOf(modName1, modName2))
+        // (we need to copy the Iron Sword across too)
+        asResourceFile("IronSword.esp").copyTo(File(outputFolder.root, "IronSword.esp"))
+        val reloadedMods = chimmer.load(outputFolder.root, listOf("Skyrim.esm", "IronSword.esp", modName1, modName2), false)
+
 
         val mergedModName = "IronSwords_${System.currentTimeMillis()}.esp"
         val mergedMod = chimmer.createMod(mergedModName)
-                .withWeapons(listOf(reloadedMods[0].weapons[0], reloadedMods[1].weapons[0]))
+                .withWeapons(listOf(reloadedMods[1].weapons[0], reloadedMods[2].weapons[0]))
 
         // And we save that mod
         chimmer.save(mergedMod)
@@ -78,7 +82,7 @@ class SynchronizingFormIdsAndMasterFiles() {
         // Given a mod with an Iron Sword in it and another with a crossbow
         val plugins = listOf("Skyrim.esm", "Dawnguard.esm", "IronSword.esp", "ArmorBootsSwordCrossbow.esp", "MiscellaneousKeyword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
-        var chimmer = Chimmer(outputFolder.root)
+        var chimmer = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder())
         val mods = chimmer.load(modDirectory, plugins, false)
 
         // When we add the crossbow, then the sword with a keyword from another mod and save it as a new mod
@@ -99,7 +103,7 @@ class SynchronizingFormIdsAndMasterFiles() {
         File(modDirectory, "MiscellaneousKeyword.esp").copyTo(File(outputFolder.root, "MiscellaneousKeyword.esp"))
 
         val newModList = listOf("Skyrim.esm", "Dawnguard.esm", "IronSword.esp", "MiscellaneousKeyword.esp", newModName)
-        chimmer = Chimmer(outputFolder.root)
+        chimmer = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder())
         val reloadedMods = chimmer.load(outputFolder.root, newModList, false)
 
         // Then the keyword should be updated to reflect the position in the new masterlist

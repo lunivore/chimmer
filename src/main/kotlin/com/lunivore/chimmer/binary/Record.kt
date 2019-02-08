@@ -14,50 +14,60 @@ import javax.xml.bind.DatatypeConverter
  * every mod. Note that the TES4 header is where the masters originate, so any TES4 record will ignore the (usually
  * empty) list of masters passed in.
  *
+ * To avoid having to parse every record, a record will either be constructed with subrecords, or with recordBytes;
+ * they may be turned into subrecords later.
+ *
  * See http://en.uesp.net/wiki/Tes5Mod:Mod_File_Format#Records
  */
-@ExperimentalUnsignedTypes
-data class Record(val type: String, val flags: UInt, val formId: FormId, val formVersion: UShort, val subrecords: List<Subrecord>,
-                  val masters: List<String>)
-    : List<Subrecord> by subrecords {
+@UseExperimental(ExperimentalUnsignedTypes::class)
+data class Record private constructor(val type: String, val flags: UInt, val formId: FormId, val formVersion: UShort, val recordBytes: List<Byte>?, var lazySubrecords: List<Subrecord>?,
+                  val masters: List<String>) {
 
     companion object {
+        private val OLDRIM_VERSION = 43.toUShort()
         val RECORD_HEADER_SIZE = 24
         val logger by Logging()
 
         private val REVISION_FIELD_IN_RECORD_HEADER = 0u
         private val UNKNOWN_FIELDS_IN_RECORD_HEADER = 0u.toUShort()
 
+
         val consistencyRecorderForTes4: ConsistencyRecorder = {
             throw IllegalStateException("TES4 records should always have form id of 0")
         }
 
         fun parseTes4(modName: String, bytes: List<Byte>): ParseResult<Record> {
-            val (headerBytes, subrecordResult, rest) = parseDataForType("TES4", bytes, listOf())
-            val masters = findMastersForTes4HeaderRecordOnly(subrecordResult.parsed)
+            val (headerBytes, recordBytes, rest) = parseDataForType(modName, "TES4", bytes, listOf())
 
-            return ParseResult(Record(modName, headerBytes, subrecordResult.parsed, masters), rest)
+
+            val subrecordsResult = Subrecord.parse(recordBytes)
+            if (subrecordsResult.failed) throw IllegalStateException(createErrorMessage("TES4", bytes, modName))
+
+            val masters = findMastersForTes4HeaderRecordOnly(subrecordsResult.parsed)
+
+            return ParseResult(Record(modName, headerBytes, null, subrecordsResult.parsed, masters), rest)
         }
 
         fun parseAll(modName: String, bytes: List<Byte>, masters: List<String>): ParseResult<List<Record>> {
+            if (bytes.size == 0) return ParseResult(listOf(), bytes)
+
             val records = mutableListOf<Record>()
             var rest = bytes
-            // TODO: Throw an exception if the bytes aren't long enough to be a record
 
             val type = String(bytes.subList(0, 4).toByteArray())
 
             while (startsWithRecordType(rest, type)) {
 
-                val (headerBytes, subrecordResult, newRest) = parseDataForType(type, rest, masters)
+                val (headerBytes, recordBytes, newRest) = parseDataForType(modName, type, rest, masters)
                 rest = newRest
-
-                records.add(Record(modName, headerBytes, subrecordResult.parsed, masters))
+                val record = Record(modName, headerBytes, recordBytes, null, masters)
+                records.add(record)
             }
             return ParseResult(records, rest)
         }
 
-        private fun parseDataForType(type: String, bytes: List<Byte>, masters: List<String>):
-                Triple<List<Byte>, ParseResult<List<Subrecord>>, List<Byte>> {
+        private fun parseDataForType(modName: String, type: String, bytes: List<Byte>, masters: List<String>):
+                Triple<List<Byte>, List<Byte>, List<Byte>> {
 
             // As well as the mod having a header, each record has a header too.
             // The header is always of a fixed length, starting with the record type as a 4-letter string.
@@ -68,21 +78,28 @@ data class Record(val type: String, val flags: UInt, val formId: FormId, val for
             // to read in).
             val recordLength = bytes.subList(4, 8).toLittleEndianInt()
 
-            // TODO: Throw an exception if we don't have as many bytes as the recordLength says we should
+            if (bytes.size < 24 + recordLength) throw IllegalStateException(
+                    createErrorMessage(type, bytes, modName))
 
             val postHeaderData = bytes.subList(24, bytes.size)
             val recordData = postHeaderData.subList(0, recordLength)
 
-            logger.info("Found type $type with form Id ${DatatypeConverter.printHexBinary(bytes.subList(12, 16).toByteArray())}, length $recordLength")
+            logger.debug("Found type $type with form Id ${formIdAsString(bytes)}, length $recordLength")
 
             val rest = if (postHeaderData.size > recordLength)
                 postHeaderData.subList(recordLength, postHeaderData.size) else listOf()
 
-            val subrecordsResult = Subrecord.parse(recordData)
-
-            val result = Triple(headerBytes, subrecordsResult, rest)
+            val result = Triple(headerBytes, recordData, rest)
             return result
         }
+
+        private fun createErrorMessage(type: String, bytes: List<Byte>, modName: String?): String {
+            val modToUse = modName ?: "new mod"
+            return "Record $type with formId ${formIdAsString(bytes)} malformed in mod ${modToUse}"
+        }
+
+        private fun formIdAsString(bytes: List<Byte>) =
+                DatatypeConverter.printHexBinary(bytes.subList(12, 16).reversed().toByteArray())
 
         private fun findMastersForTes4HeaderRecordOnly(subrecords: List<Subrecord>): List<String> {
             return subrecords.filter { it.type == "MAST" }.map { it.asString() }
@@ -99,31 +116,68 @@ data class Record(val type: String, val flags: UInt, val formId: FormId, val for
          */
         private fun parseType(bytes: List<Byte>) = String(bytes.subList(0, 4).toByteArray())
 
+        fun createTes4(): Record {
+
+            val tes4subrecords = listOf(
+                    Subrecord("HEDR", listOf(
+                            1.7f.toLittleEndianBytes().toList(),
+                            0.toLittleEndianBytes().toList(),
+                            1024.toLittleEndianBytes().toList()).flatten()),
+                    Subrecord("CNAM", "Chimmer\u0000".toByteArray().toList()),
+                    Subrecord("SNAM", "\u0000".toByteArray().toList()))
+            return Record("TES4", 0u, FormId(null, 0u, listOf()), OLDRIM_VERSION, null, tes4subrecords, listOf())
+        }
+
     }
 
-    constructor(modName : String, headerBytes: List<Byte>, subrecords: List<Subrecord>, masters: List<String>) :
+    constructor(modName : String, headerBytes: List<Byte>, recordBytes: List<Byte>?, subrecords: List<Subrecord>?, masters: List<String>) :
             // We discard everything else in the Record header as it's either never used
             // or we'll derive it (e.g.: data size).
             this(String(headerBytes.subList(0, 4).toByteArray()), // Type
                     headerBytes.subList(8, 12).toLittleEndianUInt(),  // Flags
                     FormId(modName, headerBytes.subList(12, 16).toLittleEndianUInt(), masters),  // FormId (indexed to given masters)
                     headerBytes.subList(20, 22).toLittleEndianUShort(), // Version; Oldrim = 43, SSE = 44
-                    subrecords, masters)
+                    recordBytes, subrecords, masters)
+
+    val subrecords : List<Subrecord>
+        get() {
+            if (lazySubrecords == null) {
+                val result = Subrecord.parse(recordBytes!!)
+                if (result.failed) throw IllegalStateException(createErrorMessage(type, recordBytes!!, formId.loadingMod))
+
+                lazySubrecords = result.parsed
+            }
+            return lazySubrecords!!
+        }
+
+
 
     fun render(newMasters: List<String>, consistencyRecorder: ConsistencyRecorder, renderer: (ByteArray) -> Unit) {
 
         val formIdToRender : UInt = if (type == "TES4") 0x00000000u
             else { getFormIdToRender(consistencyRecorder, newMasters) }
 
-        val subrecordsToRender = if (type == "TES4") {
-            tes4SubrecordsWithMastDataPairs(newMasters)
+        if (type == "TES4" || recordBytes == null) {
+
+            val subrecordsToRender = if (type == "TES4") {
+                tes4SubrecordsWithMastDataPairs(newMasters)
+            } else {
+                subrecords!!
+            }
+
+            var size = 0
+            subrecordsToRender.forEach { it.renderTo { size += it.size } }
+
+            renderRecordHeader(renderer, size, formIdToRender)
+
+            subrecordsToRender.forEach { it.renderTo(renderer) }
         } else {
-            subrecords
+            renderRecordHeader(renderer, recordBytes.size, formIdToRender)
+            renderer(recordBytes!!.toByteArray())
         }
+    }
 
-        var size = 0
-        subrecordsToRender.forEach { it.renderTo { size += it.size } }
-
+    private fun renderRecordHeader(renderer: (ByteArray) -> Unit, size: Int, formIdToRender: UInt) {
         renderer(type.toByteArray())
         renderer(size.toLittleEndianBytes())
         renderer(flags.toLittleEndianBytes())
@@ -131,8 +185,6 @@ data class Record(val type: String, val flags: UInt, val formId: FormId, val for
         renderer(REVISION_FIELD_IN_RECORD_HEADER.toLittleEndianBytes())
         renderer(formVersion.toLittleEndianBytes())
         renderer(UNKNOWN_FIELDS_IN_RECORD_HEADER.toLittleEndianBytes())
-
-        subrecordsToRender.forEach { it.renderTo(renderer) }
     }
 
     private fun tes4SubrecordsWithMastDataPairs(newMasters: List<String>): List<Subrecord> {
@@ -159,13 +211,21 @@ data class Record(val type: String, val flags: UInt, val formId: FormId, val for
     }
 
     private fun reindexForNewMasters(newMasters: List<String>): UInt {
+
+        // Note that we can't currently reindex all internal formIds, so if this hasn't been converted to
+        // subrecords (because we know how to convert it), and the masters have changed, that's a VERY BAD THING.
+        // It's fine if the original masters are still at the start of the new master list though.
+        if (lazySubrecords == null && (
+                        newMasters.size < masters.size || newMasters.subList(0, masters.size) != masters)) {
+            val modToUse = formId.loadingMod ?: "new mod"
+            throw IllegalStateException("Attempted to reindex unworked record $type with formId ${formId.toBigEndianHexString()} from mod $modToUse; old masters was $masters, new masters are $newMasters")
+        }
+
         val master = formId.master
         val newMasterIndex = if (master == null) newMasters.size else newMasters.indexOf(master)
         if (newMasterIndex == -1) { throw IllegalArgumentException("The master $master was not found in the masterlist $newMasters.") }
         return (newMasterIndex.toUInt() shl 24) + formId.unindexed
     }
-
-
 
     fun copyAsNew(): Record {
         return copy(formId = FormId.createNew(masters))
@@ -173,8 +233,8 @@ data class Record(val type: String, val flags: UInt, val formId: FormId, val for
     }
 
     fun with(newSubrecord: Subrecord): Record {
-        val newSubrecords = map { if (it.type == newSubrecord.type) newSubrecord else it }
-        return copy(subrecords = newSubrecords)
+        val newSubrecords = subrecords.map { if (it.type == newSubrecord.type) newSubrecord else it }
+        return copy(recordBytes = null, lazySubrecords = newSubrecords)
     }
 
     fun isNew(): Boolean {
@@ -185,7 +245,7 @@ data class Record(val type: String, val flags: UInt, val formId: FormId, val for
      * A convenience method for looking up subrecords by type, since this is something we'll be doing a lot.
      */
     fun find(type: String): Subrecord? {
-        return find { it.type == type }
+        return subrecords.find { it.type == type }
     }
 
 }

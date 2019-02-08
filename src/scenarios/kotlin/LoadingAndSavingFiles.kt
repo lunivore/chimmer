@@ -1,6 +1,6 @@
 package com.lunivore.chimmer
 
-import com.lunivore.chimmer.scenariohelpers.asResourceFile
+import com.lunivore.chimmer.testheplers.asResourceFile
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -21,7 +21,7 @@ class LoadingAndSavingFiles {
         val modDirectory = plugins.parentFile
 
         // When we load them using the order provided
-        val mods = Chimmer(outputFolder.root).load(modDirectory, plugins)
+        val mods = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder()).load(modDirectory, plugins)
 
         // Then we should have them in a list
         assertEquals(2, mods.size)
@@ -36,13 +36,13 @@ class LoadingAndSavingFiles {
         val modDirectory = asResourceFile("plugins.txt").parentFile
 
         // When we load them using that order
-        var mods = Chimmer(outputFolder.root).load(modDirectory, plugins)
+        var mods = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder()).load(modDirectory, plugins)
 
         // Then we should have them in that order
         assertEquals(listOf("IronSword.esp", "ArmorBootsSwordCrossbow.esp"), mods.map { it.name }.toList())
 
         // When we load them using a reverse order
-        mods = Chimmer(outputFolder.root).load(modDirectory, plugins.reversed())
+        mods = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder()).load(modDirectory, plugins.reversed())
 
         // Then we should have them in the other order
         assertEquals(listOf("ArmorBootsSwordCrossbow.esp", "IronSword.esp"), mods.map { it.name }.toList())
@@ -56,7 +56,7 @@ class LoadingAndSavingFiles {
 
         // When we try to load it
         try {
-            var mods = Chimmer(outputFolder.root).load(modFolder, plugins)
+            var mods = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder()).load(modFolder, plugins)
             fail("Should have thrown an exception")
         } catch (e: FileNotFoundException) {
             // Expected
@@ -73,7 +73,7 @@ class LoadingAndSavingFiles {
 
         // When we try to load it
         try {
-            var mods = Chimmer(outputFolder.root).load(modFolder, plugins)
+            var mods = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder()).load(modFolder, plugins)
             fail("Should have thrown an exception")
         } catch (e: FileNotFoundException) {
             // Expected
@@ -87,7 +87,7 @@ class LoadingAndSavingFiles {
         // Given we already loaded a mod
         val plugins = listOf("Skyrim.esm", "IronSword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
-        val chimmer = Chimmer(outputFolder.root)
+        val chimmer = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder())
         var mods = chimmer.load(modDirectory, plugins, false)
 
         // When we save it as a new mod
@@ -96,5 +96,31 @@ class LoadingAndSavingFiles {
 
         // Then it should be available to us
         assertTrue(File(outputFolder.root, "$filename").exists())
+    }
+
+    @Test
+    fun `should use plugins txt and Skyrim mod dir from the right places by default`() {
+        // Given Chimmer
+        val chimmer = Chimmer(skyrimFinder = SkyrimFinder())
+
+        // When we tell it to load all
+        val mods = chimmer.load(true)
+
+        // Then it should have found things successfully
+        assertEquals("Skyrim.esm", mods[0].name)
+    }
+
+    @Test
+    fun `should be able to load compressed records like NPCs`() {
+        // Given a mod with compressed records
+        val plugins = listOf("Skyrim.esm", "CompressedDunTransmogrifyDremora.esp")
+        val modDirectory = asResourceFile("plugins.txt").parentFile
+        val chimmer = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder())
+
+        // When we load the mods
+        var mods = chimmer.load(modDirectory, plugins, false)
+
+        // Then we should be able to see those records too
+        assertEquals("00000EB4", mods[0].npcs[0].formId.toBigEndianHexString())
     }
 }

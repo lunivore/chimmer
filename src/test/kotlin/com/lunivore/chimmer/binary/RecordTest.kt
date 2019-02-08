@@ -22,7 +22,7 @@ class RecordTest {
 
         // Then we should get back one record  with all the relevant subrecords in
         val record = result.parsed
-        assertEquals("HEDR, CNAM, MAST, DATA".split(", "), record.map { it.type })
+        assertEquals("HEDR, CNAM, MAST, DATA".split(", "), record.subrecords.map { it.type })
 
         // And the records should have the correct data
         assertEquals("Chimmer", record.find("CNAM")?.asString())
@@ -49,6 +49,35 @@ class RecordTest {
 
         // And the rest should be returned too for further parsing
         assertEquals(rest, result.rest.toReadableHexString())
+    }
+
+    @Test
+    fun `should return empty grups (CLDC, HAIR, RGDL, SCPT, SCOL, PWAT) without any trouble`() {
+        // Given an empty grup (so no bytes)
+        // When we parse it
+
+        val result = Record.parseAll("Wibble.esp", listOf(), listOf("Skyrim.esm"))
+
+        // Then we should just get back an empty list.
+        assertEquals(0, result.parsed.size)
+    }
+
+    @Test
+    fun `should throw an exception with mod, type and form id if it's malformed`() {
+        // Given an iron sword weapon as bytes but with a few missing
+        val goodHex = Hex.IRON_SWORD_WEAPON
+        val badHex = goodHex.substring(0, goodHex.length - 3)
+
+        // When we parse it
+        try {
+            val result = Record.parseAll("Wibble.esp", badHex.fromHexStringToByteList(), listOf("Skyrim.esm"))
+            fail()
+        } catch (e: IllegalStateException) {
+            // Then it should have thrown an exception
+            assertTrue(e.message!!.contains("Wibble.esp"))
+            assertTrue(e.message!!.contains("WEAP"))
+            assertTrue(e.message!!.contains("00012EB7")) // Iron sword form id
+        }
     }
 
     @Test
@@ -122,7 +151,10 @@ class RecordTest {
         val hex = Hex.IRON_SWORD_WEAPON
         val record = Record.parseAll("Wibble.esp", hex.fromHexStringToByteList(), listOf("Skyrim.esm")).parsed[0]
 
-        // When we ask it to render with a new list of masters
+        // When we ask it to render with a new list of masters (having converted it to subrecords)
+        // NB: Can delete the explicit "convert to subrecords" once we're able to convert internal FormIds for
+        // all records, because that will happen anyway
+        record.subrecords
         val byteArray = ByteArrayOutputStream()
         record.render(listOf("Whatever.esm", "Skyrim.esm"), ::fakeConsistencyRecorder) {byteArray.write(it)}
 
@@ -163,6 +195,9 @@ class RecordTest {
         val hex = Hex.IRON_SWORD_WEAPON
         val record = Record.parseAll("IronSword.esp", hex.fromHexStringToByteList(), listOf("Skyrim.esm")).parsed[0]
 
+        // Which we've worked on (so it's converted to subrecords)
+        record.subrecords
+
         // When we ask it to render with a new list of masters that does not contain its origin
         // Then it should throw an IllegalArgumentException
         try {
@@ -171,6 +206,23 @@ class RecordTest {
         } catch (e : IllegalArgumentException) {
             // expected
         }
+    }
+
+    @Test
+    fun `should throw an exception if we tried to convert a record to new masters without de-subbing it first`() {
+        // TODO: Finish reindexing ALL formIds for all records, then delete the associated check and this test
+        // Given a record containing an NPC which we're not going to work with
+        val hex = Hex.COMPRESSED_NPC_RECORD.fromHexStringToByteList()
+        val npc = Record.parseAll("Dremora.esp", hex, listOf("Skyrim.esm")).parsed[0]
+
+        // When we ask it to render with a new list of masters that does not contain its origin
+        try {
+            npc.render(listOf("Whatever.esm", "Another.esp"), ::fakeConsistencyRecorder) {  }
+            fail()
+        } catch(e: IllegalStateException) {
+            // Then it should throw an IllegalStateException
+        }
+
     }
 
     @Test
@@ -188,6 +240,7 @@ class RecordTest {
 
         assertEquals(newMasters, renderedTes4.masters)
     }
+
 }
 
 

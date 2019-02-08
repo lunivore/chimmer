@@ -28,23 +28,22 @@ data class Subrecord(val type: String, val bytes: List<Byte>) {
 
             // All subrecords have a 4-letter code, followed by a short (2 bytes) showing their length.
             // If we don't have at least 6 bytes, we're done.
+            if (rest.size < 6) return ParseResult(listOf(), listOf(), "Failed to parse subrecord")
+
             while (rest.size > 5) {
                 val type = String(rest.subList(0, 4).toByteArray())
                 val length = rest.subList(4, 6).toLittleEndianInt()
 
                 logger.debug("Subrecord $type, length $length")
 
-                // TODO: Throw an error if the rest of the bytes aren't long enough
+                if (rest.size < 6 + length) return ParseResult(listOf(), listOf(), "Failed to parse subrecord of type $type")
 
                 subrecords.add(Subrecord(type, rest.subList(6, 6 + length)))
                 rest = if (rest.size <= 6 + length) listOf() else rest.subList(6 + length, rest.size)
             }
 
-            // TODO: Throw an error if there are any bytes left over. Since we're greedy when it comes to creating
-            // our subrecords, we need to be given the exact bytes; anything else means something went wrong.
             return ParseResult(subrecords, rest)
         }
 
     }
-
 }

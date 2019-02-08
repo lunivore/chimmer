@@ -1,6 +1,6 @@
 package com.lunivore.chimmer
 
-import com.lunivore.chimmer.scenariohelpers.asResourceFile
+import com.lunivore.chimmer.testheplers.asResourceFile
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -21,7 +21,7 @@ class CreatingANewMod {
         // Given we loaded a mod with an iron sword in
         val plugins = listOf("Skyrim.esm", "IronSword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
-        val chimmer = Chimmer(outputFolder.root)
+        val chimmer = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder())
         var mods = chimmer.load(modDirectory, plugins, false)
 
         // When we parse a new mod with the same iron sword
@@ -45,7 +45,7 @@ class CreatingANewMod {
 
         val plugins = listOf("Skyrim.esm", "IronSword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
-        val chimmer = Chimmer(outputFolder.root)
+        val chimmer = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder())
         var mods = chimmer.load(modDirectory, plugins, false)
 
         // When we create a new mod with a copy of that sword that's not an override
@@ -63,7 +63,7 @@ class CreatingANewMod {
         assertTrue(File(outputFolder.root, "chimmer/${modName}_consistency.txt").exists())
 
         // When we reload the mod again
-        mods = Chimmer(outputFolder.root).load(outputFolder.root, listOf("Skyrim.esm", modName), false)
+        mods = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder()).load(outputFolder.root, listOf("Skyrim.esm", modName), false)
 
         // Then the sword should have the same ID
         val reloadedSwordId = newMod.weapons.first().formId

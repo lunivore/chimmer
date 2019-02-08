@@ -1,7 +1,6 @@
 package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.ConsistencyRecorder
-import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.binary.Record.Companion.consistencyRecorderForTes4
 
 
@@ -10,7 +9,6 @@ import com.lunivore.chimmer.binary.Record.Companion.consistencyRecorderForTes4
 @UseExperimental(ExperimentalUnsignedTypes::class)
 data class ModBinary(val header: Record, val grups: List<Grup>) : List<Grup> by grups {
     companion object {
-        private val OLDRIM_VERSION = 43.toUShort()
         private val GRUP_ORDER = fromCommaDelimitedToList("""
             GMST, KYWD, LCRT, AACT, TXST, GLOB, CLAS, FACT,
             HDPT, HAIR, EYES, RACE, SOUN, ASPC, MGEF, SCPT,
@@ -43,15 +41,8 @@ data class ModBinary(val header: Record, val grups: List<Grup>) : List<Grup> by 
         }
 
         fun create(): ModBinary {
-            val tes4subrecords = listOf(
-                    Subrecord("HEDR", listOf(
-                            1.7f.toLittleEndianBytes().toList(),
-                            0.toLittleEndianBytes().toList(),
-                            1024.toLittleEndianBytes().toList()).flatten()),
-                    Subrecord("CNAM", "Chimmer\u0000".toByteArray().toList()),
-                    Subrecord("SNAM", "\u0000".toByteArray().toList()))
 
-            val tes4 = Record("TES4", 0u, FormId(null, 0u, listOf()), OLDRIM_VERSION, tes4subrecords, listOf())
+            val tes4 = Record.createTes4()
             return ModBinary(tes4, listOf())
         }
     }
@@ -78,7 +69,7 @@ data class ModBinary(val header: Record, val grups: List<Grup>) : List<Grup> by 
         )
 
         header.render(orderedMasters, consistencyRecorderForTes4, renderer)
-        grups.forEach { it.render(loadOrderForMasters, consistencyRecorder, renderer) }
+        grups.forEach { it.render(orderedMasters, consistencyRecorder, renderer) }
     }
 
     fun <T : RecordWrapper<T>> createOrReplaceGrup(type: String, recordWrappers: List<T>): ModBinary {

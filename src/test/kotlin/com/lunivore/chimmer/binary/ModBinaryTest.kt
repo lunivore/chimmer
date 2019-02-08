@@ -26,7 +26,7 @@ class ModBinaryTest {
         val modBinary = ModBinary.parse("Wibble.esp", modBytes)
 
         // Then it should have a header with the correct author
-        assertEquals("Chimmer", modBinary.header.find { it.type == "CNAM" }?.asString())
+        assertEquals("Chimmer", modBinary.header.find("CNAM")?.asString())
 
         // And the correct masters
         assertEquals(listOf("Skyrim.esm"), modBinary.header.masters)

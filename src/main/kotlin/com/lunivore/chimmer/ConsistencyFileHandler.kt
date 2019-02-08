@@ -32,6 +32,7 @@ class ConsistencyFileHandler(private val workingDirectory : File,
             val nextId = lastUsedId + 1u
             mapForMod[editorId] = nextId
             lastUsedId = nextId
+
             nextId }
         else {
             formId
