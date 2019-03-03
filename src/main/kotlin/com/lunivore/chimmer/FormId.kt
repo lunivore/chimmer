@@ -2,10 +2,13 @@ package com.lunivore.chimmer
 
 import com.lunivore.chimmer.binary.toLittleEndianBytes
 
+typealias UnindexedFormId = UInt
+
 @ExperimentalUnsignedTypes
 data class FormId(val loadingMod: String?, val raw: UInt, val masters: List<String>) {
 
     companion object {
+
         fun createNew(masters: List<String>): FormId {
             return FormId(null, UNINDEXED_FORM_ID_FOR_NEW_RECORD, masters)
         }
@@ -27,7 +30,12 @@ data class FormId(val loadingMod: String?, val raw: UInt, val masters: List<Stri
     val master
         get() = findMaster()
 
-    val unindexed: UInt
+
+    data class  Key(val master: String?, val unindexed: UnindexedFormId)
+    val key
+        get() = Key(findMaster(), unindexed)
+
+    val unindexed: UnindexedFormId
         get() = raw and 0x00ffffffu
 
     val rawBytes: ByteArray
@@ -67,4 +75,18 @@ data class FormId(val loadingMod: String?, val raw: UInt, val masters: List<Stri
      * Returns the original hex string with which the form id was created, independent of its master's load order.
      */
     fun toBigEndianHexString(): String = raw.toString(16).padStart(8, '0').toUpperCase()
+}
+
+@UseExperimental(ExperimentalUnsignedTypes::class)
+class FormIdKeyComparator(private val loadOrder: List<String>) : Comparator<FormId.Key>{
+    override fun compare(o1: FormId.Key?, o2: FormId.Key?): Int {
+        if(o1 == null || o2 == null) throw IllegalArgumentException("FormId keys should never be null!")
+
+        val o1Index = loadOrder.indexOf(o1.master)
+        val o2Index = loadOrder.indexOf(o2.master)
+
+        if (o1Index == -1  || o2Index == -1) throw  IllegalArgumentException("Could not find masters ${o1.master} and ${o2.master} in load order $loadOrder")
+
+        return if (o1Index == o2Index) o1.unindexed.compareTo(o2.unindexed) else o1Index.compareTo(o2Index)
+    }
 }

@@ -8,7 +8,6 @@ import java.io.File
 typealias ModFilename = String
 typealias NamingConvention = (ModFilename) -> File
 typealias EditorId = String
-typealias UnindexedFormId = UInt
 typealias ConsistencyRecorder = (EditorId) -> UnindexedFormId
 typealias MapForMod = MutableMap<EditorId, UnindexedFormId>
 

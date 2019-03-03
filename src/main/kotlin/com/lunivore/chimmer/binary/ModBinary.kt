@@ -1,15 +1,18 @@
 package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.ConsistencyRecorder
+import com.lunivore.chimmer.FormId
+import com.lunivore.chimmer.FormIdKeyComparator
+import com.lunivore.chimmer.binary.ModBinary.Companion.GRUP_ORDER
 import com.lunivore.chimmer.binary.Record.Companion.consistencyRecorderForTes4
 
 
 // TODO: Recalculate next available object id (highest + 1024), number of records and groups, and the masterlist.
 
 @UseExperimental(ExperimentalUnsignedTypes::class)
-data class ModBinary(val header: Record, val grups: List<Grup>) : List<Grup> by grups {
+data class ModBinary(val modName: String?, val header: Record, val grups: List<Grup>) : List<Grup> by grups {
     companion object {
-        private val GRUP_ORDER = fromCommaDelimitedToList("""
+        internal val GRUP_ORDER = fromCommaDelimitedToList("""
             GMST, KYWD, LCRT, AACT, TXST, GLOB, CLAS, FACT,
             HDPT, HAIR, EYES, RACE, SOUN, ASPC, MGEF, SCPT,
             LTEX, ENCH, SPEL, SCRL, ACTI, TACT, ARMO, BOOK,
@@ -27,6 +30,7 @@ data class ModBinary(val header: Record, val grups: List<Grup>) : List<Grup> by 
             DUAL, SNCT, SOPM, COLL, CLFM, REVB
         """)
 
+
         private fun fromCommaDelimitedToList(grupList: String) =
                 grupList.lines().joinToString("").split(",").map {it.trim()}
 
@@ -37,13 +41,13 @@ data class ModBinary(val header: Record, val grups: List<Grup>) : List<Grup> by 
             val headerRecord = result.parsed
             val grups = Grup.parseAll(loadingMod, result.rest, headerRecord.masters)
 
-            return ModBinary(headerRecord, grups)
+            return ModBinary(loadingMod, headerRecord, grups)
         }
 
         fun create(): ModBinary {
 
             val tes4 = Record.createTes4()
-            return ModBinary(tes4, listOf())
+            return ModBinary(null, tes4, listOf())
         }
     }
 
@@ -96,4 +100,35 @@ data class ModBinary(val header: Record, val grups: List<Grup>) : List<Grup> by 
     }
 
     fun find(type: String): Grup? = find { it.type == type }
+}
+
+fun List<ModBinary>.merge(loadOrder: List<String>): ModBinary {
+
+    // Creates a list of all the grups for each grupname, eg:
+    // ARMO1, ARMO2
+    // (No KYWDS, empty list)
+    // WEAP1, WEAP3, WEAP5
+    val grupsByNameFromEachMod = GRUP_ORDER.map { grupName -> this.map { it.find(grupName)}.filterNotNull()}
+
+    // For each record in each grup, finds the last version of it and adds it to a map by FormId.Key
+    // ARMO: ArmoRec1, ArmoRec2... ArmoRec14
+    // (No KYWDS, still an empty list)
+    // WEAP: WeapRec1, WeapRec2... WeapRec8
+    val grupOrderedMapsOfLastRecordsWithFormIdKey = grupsByNameFromEachMod.map {
+        it.foldRight(mutableMapOf<FormId.Key, Record>()) { grup, mapOfRecordsByFormIdKey ->
+            grup.forEach { mapOfRecordsByFormIdKey.putIfAbsent(it.formId.key, it) }
+            mapOfRecordsByFormIdKey
+        }
+    }
+
+    // For each grup name, order the records by FormId then make a new grup with all the records in it,
+    // and a mod with the new grups.
+    val comparator = FormIdKeyComparator(loadOrder)
+    val newGrups = grupOrderedMapsOfLastRecordsWithFormIdKey.mapIndexed {
+        i, mappy -> if (grupsByNameFromEachMod[i].isEmpty()) null else
+        grupsByNameFromEachMod[i].first().copy(records = mappy.keys
+            .sortedWith(comparator).map{ mappy[it]!! })
+    }.filterNotNull()
+
+    return ModBinary.create().copy(grups = newGrups)
 }

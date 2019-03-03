@@ -1,16 +1,21 @@
 package com.lunivore.chimmer
 
 import com.lunivore.chimmer.binary.ModBinary
+import com.lunivore.chimmer.binary.merge
+import com.lunivore.chimmer.skyrim.Armor
 import com.lunivore.chimmer.skyrim.Keyword
 import com.lunivore.chimmer.skyrim.Npc
 import com.lunivore.chimmer.skyrim.Weapon
 
 // Note that this is a top-level class; tests / documentation
 // can be found in the scenarios module.
-data class Mod(val name: String, private val modBinary: ModBinary) {
+data class Mod(val name: String, internal val modBinary: ModBinary) {
 
     val weapons: List<Weapon>
         get() = modBinary.find("WEAP")?.map { Weapon(it) } ?: listOf()
+
+    val armors: List<Armor>
+        get() = modBinary.find("ARMO")?.map { Armor(it) } ?: listOf()
 
     val keywords: List<Keyword>
         get() = modBinary.find("KYWD")?.map { Keyword(it) } ?: listOf()
@@ -22,6 +27,7 @@ data class Mod(val name: String, private val modBinary: ModBinary) {
     val masters: Set<String>
         get() = modBinary.masters
 
+
     fun renderTo(loadOrderForMasters: List<ModFilename>, consistencyRecorder: ConsistencyRecorder, renderer: (ByteArray) -> Unit) {
         modBinary.render(loadOrderForMasters, consistencyRecorder, renderer)
     }
@@ -30,3 +36,10 @@ data class Mod(val name: String, private val modBinary: ModBinary) {
         return Mod(name, modBinary.createOrReplaceGrup("WEAP", weapons))
     }
 }
+
+fun List<Mod>.merge(modName: String, loadOrder: List<String>) : Mod {
+    val modBinaries : List<ModBinary> = this.map { it.modBinary }
+    return Mod(modName, modBinaries.merge(loadOrder))
+
+}
+

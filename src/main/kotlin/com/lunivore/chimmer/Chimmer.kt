@@ -76,4 +76,8 @@ class Chimmer(val outputFolder: File = File("."),
         return Mod(modName, ModBinary.create())
 
     }
+
+    fun merge(newModName: String, mods: List<Mod>): Mod {
+        return mods.merge(newModName, lastSeenLoadOrder)
+    }
 }

@@ -19,6 +19,11 @@ data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
                 return kwda.bytes.chunked(4).map { FormId(loadingMod, it.toLittleEndianUInt(), record.masters) }
             }
 
+    val editorId: String
+        get() {
+            return record.find("EDID")?.asString() ?: ""
+        }
+
     fun plusKeyword(keywordToAdd: FormId): Weapon { return withKeywords(keywords.plus(keywordToAdd)) }
 
     fun withKeywords(keywords: List<FormId>): Weapon {
