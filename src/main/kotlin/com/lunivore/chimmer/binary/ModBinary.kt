@@ -116,7 +116,15 @@ fun List<ModBinary>.merge(loadOrder: List<String>): ModBinary {
     // WEAP: WeapRec1, WeapRec2... WeapRec8
     val grupOrderedMapsOfLastRecordsWithFormIdKey = grupsByNameFromEachMod.map {
         it.foldRight(mutableMapOf<FormId.Key, Record>()) { grup, mapOfRecordsByFormIdKey ->
-            grup.forEach { mapOfRecordsByFormIdKey.putIfAbsent(it.formId.key, it) }
+
+
+            grup.forEach {
+                try {
+                    mapOfRecordsByFormIdKey.putIfAbsent(it.formId.key, it)
+                } catch (e: IllegalStateException) {
+                    throw IllegalStateException("Error in record ${it.formId.toBigEndianHexString()} with EDID ${it.find("EDID")?.asString()}", e)
+                }
+            }
             mapOfRecordsByFormIdKey
         }
     }

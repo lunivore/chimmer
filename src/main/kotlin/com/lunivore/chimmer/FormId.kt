@@ -15,8 +15,22 @@ data class FormId(val loadingMod: String?, val raw: UInt, val masters: List<Stri
 
         // Note that this is never used in mods; FF is reserved for things created in-game so is safe to use here
         // as a temporary measure.
-        private val UNINDEXED_FORM_ID_FOR_NEW_RECORD: UInt = 0xffffffffu
+        private val UNINDEXED_FORM_ID_FOR_NEW_RECORD = 0xffffffffu
+        private val INDEX_OF_NEW_RECORD = 0xff
+        private val TES4_FORMID = 0u
+        private val I_DAYS_TO_RESPAWN_VENDOR_GMST = 0x0123C00Eu
     }
+
+    init {
+        val index = findIndex()
+        if (index != INDEX_OF_NEW_RECORD && index > masters.size && !isTheHorribleIDaysToRespawnVendorGMST()
+                || (index == masters.size && loadingMod == null && raw != TES4_FORMID)) {
+            throw IllegalArgumentException("FormId ${toBigEndianHexString()} has an index too large for the masterlist: ${masters}")
+        }
+    }
+
+    private fun isTheHorribleIDaysToRespawnVendorGMST() =
+            raw == I_DAYS_TO_RESPAWN_VENDOR_GMST && loadingMod == "Skyrim.esm"
 
     /**
      * Returns the master for this object, or null if the object belongs to the current mod
@@ -30,6 +44,7 @@ data class FormId(val loadingMod: String?, val raw: UInt, val masters: List<Stri
     val master
         get() = findMaster()
 
+    private fun findIndex() : Int = raw.and(0xff000000u).shr(24).toInt()
 
     data class  Key(val master: String?, val unindexed: UnindexedFormId)
     val key
@@ -44,12 +59,11 @@ data class FormId(val loadingMod: String?, val raw: UInt, val masters: List<Stri
         get() = rawBytes.toList()
 
     private fun findMaster(): String? {
-        val index = raw.and(0xff000000u).shr(24).toInt()
-
+        val index = findIndex()
         return if (index == 0xff) null
             else if (index < masters.size) masters[index]
-            else if (index == masters.size) loadingMod else
-            throw IllegalStateException("The master index $index used in form Id ${toBigEndianHexString()} is too big for the master list: ${masters}")
+            else if (index == masters.size || isTheHorribleIDaysToRespawnVendorGMST()) loadingMod else
+            throw IllegalStateException("This should never happen as these conditions were checked on construction")
     }
 
     fun isNew() = raw == UNINDEXED_FORM_ID_FOR_NEW_RECORD
