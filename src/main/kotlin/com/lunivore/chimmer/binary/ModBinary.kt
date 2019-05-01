@@ -103,40 +103,42 @@ data class ModBinary(val modName: String?, val header: Record, val grups: List<G
 }
 
 fun List<ModBinary>.merge(loadOrder: List<String>): ModBinary {
+    try {
 
-    // Creates a list of all the grups for each grupname, eg:
-    // ARMO1, ARMO2
-    // (No KYWDS, empty list)
-    // WEAP1, WEAP3, WEAP5
-    val grupsByNameFromEachMod = GRUP_ORDER.map { grupName -> this.map { it.find(grupName)}.filterNotNull()}
+        // Creates a list of all the grups for each grupname, eg:
+        // ARMO1, ARMO2
+        // (No KYWDS, empty list)
+        // WEAP1, WEAP3, WEAP5
+        val grupsByNameFromEachMod = GRUP_ORDER.map { grupName -> this.map { it.find(grupName) }.filterNotNull() }
 
-    // For each record in each grup, finds the last version of it and adds it to a map by FormId.Key
-    // ARMO: ArmoRec1, ArmoRec2... ArmoRec14
-    // (No KYWDS, still an empty list)
-    // WEAP: WeapRec1, WeapRec2... WeapRec8
-    val grupOrderedMapsOfLastRecordsWithFormIdKey = grupsByNameFromEachMod.map {
-        it.foldRight(mutableMapOf<FormId.Key, Record>()) { grup, mapOfRecordsByFormIdKey ->
-
-
-            grup.forEach {
-                try {
-                    mapOfRecordsByFormIdKey.putIfAbsent(it.formId.key, it)
-                } catch (e: IllegalStateException) {
-                    throw IllegalStateException("Error in record ${it.formId.toBigEndianHexString()} with EDID ${it.find("EDID")?.asString()}", e)
+        // For each record in each grup, finds the last version of it and adds it to a map by FormId.Key
+        // ARMO: ArmoRec1, ArmoRec2... ArmoRec14
+        // (No KYWDS, still an empty list)
+        // WEAP: WeapRec1, WeapRec2... WeapRec8
+        val grupOrderedMapsOfLastRecordsWithFormIdKey = grupsByNameFromEachMod.map {
+            it.foldRight(mutableMapOf<FormId.Key, Record>()) { grup, mapOfRecordsByFormIdKey ->
+                grup.forEach {
+                    try {
+                        mapOfRecordsByFormIdKey.putIfAbsent(it.formId.key, it)
+                    } catch (e: Exception) {
+                        throw Exception("Error merging record=${it.formId.toBigEndianHexString()} with EDID=${it.find("EDID")?.asString()}", e)
+                    }
                 }
+                mapOfRecordsByFormIdKey
             }
-            mapOfRecordsByFormIdKey
         }
+
+        // For each grup name, order the records by FormId then make a new grup with all the records in it,
+        // and a mod with the new grups.
+        val comparator = FormIdKeyComparator(loadOrder)
+        val newGrups = grupOrderedMapsOfLastRecordsWithFormIdKey.mapIndexed { i, mappy ->
+            if (grupsByNameFromEachMod[i].isEmpty()) null else
+                grupsByNameFromEachMod[i].first().copy(records = mappy.keys
+                        .sortedWith(comparator).map { mappy[it]!! })
+        }.filterNotNull()
+
+        return ModBinary.create().copy(grups = newGrups)
+    } catch (e: Exception) {
+        throw Exception("Error merging mods, loadOrder=${loadOrder}", e)
     }
-
-    // For each grup name, order the records by FormId then make a new grup with all the records in it,
-    // and a mod with the new grups.
-    val comparator = FormIdKeyComparator(loadOrder)
-    val newGrups = grupOrderedMapsOfLastRecordsWithFormIdKey.mapIndexed {
-        i, mappy -> if (grupsByNameFromEachMod[i].isEmpty()) null else
-        grupsByNameFromEachMod[i].first().copy(records = mappy.keys
-            .sortedWith(comparator).map{ mappy[it]!! })
-    }.filterNotNull()
-
-    return ModBinary.create().copy(grups = newGrups)
 }

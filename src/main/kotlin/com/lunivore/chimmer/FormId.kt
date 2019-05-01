@@ -63,7 +63,7 @@ data class FormId(val loadingMod: String?, val raw: UInt, val masters: List<Stri
         return if (index == 0xff) null
             else if (index < masters.size) masters[index]
             else if (index == masters.size || isTheHorribleIDaysToRespawnVendorGMST()) loadingMod else
-            throw IllegalStateException("This should never happen as these conditions were checked on construction")
+            throw IllegalStateException("This should never happen as non-new forms are checked for master on construction: FormId=${toBigEndianHexString()}")
     }
 
     fun isNew() = raw == UNINDEXED_FORM_ID_FOR_NEW_RECORD
@@ -71,16 +71,17 @@ data class FormId(val loadingMod: String?, val raw: UInt, val masters: List<Stri
     fun reindex(newMasters: List<String>): FormId {
         if (this.isNew()) return this
 
-        val recastMaster = master ?: throw IllegalStateException("Attempted to reindex FormId ${toBigEndianHexString()} which was not new and had no master}")
+        if (master == null) throw IllegalStateException("This should never happen as non-new forms are checked for master on construction: FormId=${toBigEndianHexString()}")
 
-        val mastersToUse = if (newMasters.contains(recastMaster)) newMasters else newMasters.plus(recastMaster)
-        val newIndex = mastersToUse.indexOf(recastMaster)
+        val mastersToUse = if (newMasters.contains(master!!)) newMasters else newMasters.plus(master!!)
+        val newIndex = mastersToUse.indexOf(master!!)
 
         if (newIndex == -1) throw IllegalStateException("""
-            Attempted to reindex FormId ${toBigEndianHexString()}
-            with masterlist $masters
-            against masterlist $newMasters;
-            loading mod was $loadingMod, identified master $master""".trimIndent())
+            Could not find master when reindexing FormId=${toBigEndianHexString()},
+            masterlist=$masters,
+            newMasterlist=$newMasters,
+            loadingMod=$loadingMod,
+            master=$master""".trimIndent())
 
         return FormId(null, newIndex.toUInt().shl(24).or(unindexed), mastersToUse)
     }
@@ -94,12 +95,13 @@ data class FormId(val loadingMod: String?, val raw: UInt, val masters: List<Stri
 @UseExperimental(ExperimentalUnsignedTypes::class)
 class FormIdKeyComparator(private val loadOrder: List<String>) : Comparator<FormId.Key>{
     override fun compare(o1: FormId.Key?, o2: FormId.Key?): Int {
-        if(o1 == null || o2 == null) throw IllegalArgumentException("FormId keys should never be null!")
+        if(o1 == null || o2 == null) throw IllegalArgumentException("This should never happen as FormIds are never null")
 
         val o1Index = loadOrder.indexOf(o1.master)
         val o2Index = loadOrder.indexOf(o2.master)
 
-        if (o1Index == -1  || o2Index == -1) throw  IllegalArgumentException("Could not find masters ${o1.master} and ${o2.master} in load order $loadOrder")
+        if (o1Index == -1  || o2Index == -1)
+            throw IllegalArgumentException("Error comparing FormIds; o1.master=${o1.master}, o2.master=${o2.master}, loadOrder=$loadOrder")
 
         return if (o1Index == o2Index) o1.unindexed.compareTo(o2.unindexed) else o1Index.compareTo(o2Index)
     }

@@ -10,8 +10,10 @@ Chimmer lets you change your mods easily! It will:
 - allowing you to merge mods into one
 - and programmatically manipulate a mod
 - and create new records
+- **TODO** - and use those new records in other records
 - **TODO** - or mark records as deleted
 - retaining consistency with previous patch runs via a consistency file a la SkyProc
+- allowing new records to reference other new records with an editorId
 - while keeping it all in sync with any changes to the master list
 - including any FormIds used internally to records
 - and save it to a new mod.
