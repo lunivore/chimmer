@@ -2,13 +2,11 @@ package com.lunivore.chimmer
 
 import com.lunivore.chimmer.testheplers.asResourceFile
 import org.junit.Assert.*
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import java.io.File
 import java.io.FileNotFoundException
 
-class LoadingAndSavingFiles  : ChimmerScenario() {
+class LoadingAndSavingMods  : ChimmerScenario() {
 
     @Test
     fun `should be able to load mods from a directory`() {
@@ -46,7 +44,7 @@ class LoadingAndSavingFiles  : ChimmerScenario() {
     }
 
     @Test
-    fun `should tell us if any file is not found`() {
+    fun `should tell us if any mod is not found`() {
         // Given a file that's not found
         val plugins = listOf("IDoNotExist.esp")
         val modFolder = asResourceFile("plugins.txt").parentFile
@@ -85,7 +83,7 @@ class LoadingAndSavingFiles  : ChimmerScenario() {
         val plugins = listOf("Skyrim.esm", "IronSword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
         val chimmer = Chimmer(fileHandler())
-        var mods = chimmer.load(modDirectory, plugins, false)
+        var mods = chimmer.load(modDirectory, plugins,  ModsToLoad.SKIP_BETHESDA_MODS)
 
         // When we save it as a new mod
         val filename = "NewIronSword_${System.currentTimeMillis()}.esp"
@@ -101,7 +99,7 @@ class LoadingAndSavingFiles  : ChimmerScenario() {
         val chimmer = Chimmer()
 
         // When we tell it to load all
-        val mods = chimmer.load(true)
+        val mods = chimmer.load(ModsToLoad.LOAD_ALL)
 
         // Then it should have found things successfully
         assertEquals("Skyrim.esm", mods[0].name)
@@ -115,7 +113,7 @@ class LoadingAndSavingFiles  : ChimmerScenario() {
         val chimmer = Chimmer(fileHandler())
 
         // When we load the mods
-        var mods = chimmer.load(modDirectory, plugins, false)
+        var mods = chimmer.load(modDirectory, plugins,  ModsToLoad.SKIP_BETHESDA_MODS)
 
         // Then we should be able to see those records too
         assertEquals("00000EB4", mods[0].npcs[0].formId.toBigEndianHexString())

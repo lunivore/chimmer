@@ -4,9 +4,7 @@ import com.lunivore.chimmer.testheplers.asResourceFile
 import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import java.io.File
 
 @UseExperimental(ExperimentalUnsignedTypes::class)
@@ -18,7 +16,7 @@ class CreatingANewMod : ChimmerScenario() {
         val plugins = listOf("Skyrim.esm", "IronSword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
         val chimmer = Chimmer(fileHandler())
-        var mods = chimmer.load(modDirectory, plugins, false)
+        var mods = chimmer.load(modDirectory, plugins,  ModsToLoad.SKIP_BETHESDA_MODS)
 
         // When we parse a new mod with the same iron sword
         val modName = "NewIronSword_${System.currentTimeMillis()}.esp"
@@ -42,7 +40,7 @@ class CreatingANewMod : ChimmerScenario() {
         val plugins = listOf("Skyrim.esm", "IronSword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
         val chimmer = Chimmer(fileHandler())
-        var mods = chimmer.load(modDirectory, plugins, false)
+        var mods = chimmer.load(modDirectory, plugins,  ModsToLoad.SKIP_BETHESDA_MODS)
 
         // When we create a new mod with a copy of that sword that's not an override
         val sword = mods[0].weapons.first().copyAsNew()
@@ -59,7 +57,7 @@ class CreatingANewMod : ChimmerScenario() {
         assertTrue(File(outputFolder.root, "chimmer/${modName}_consistency.txt").exists())
 
         // When we reload the mod again
-        mods = Chimmer(fileHandler()).load(outputFolder.root, listOf("Skyrim.esm", modName), false)
+        mods = Chimmer(fileHandler()).load(outputFolder.root, listOf("Skyrim.esm", modName),  ModsToLoad.SKIP_BETHESDA_MODS)
 
         // Then the sword should have the same ID
         val reloadedSwordId = newMod.weapons.first().formId

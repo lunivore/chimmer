@@ -2,9 +2,7 @@ package com.lunivore.chimmer
 
 import com.lunivore.chimmer.testheplers.asResourceFile
 import org.junit.Assert.assertEquals
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 
 class MergingMods : ChimmerScenario() {
 
@@ -16,7 +14,7 @@ class MergingMods : ChimmerScenario() {
 
         // When we load them using that order, then merge them
         val chimmer = Chimmer(fileHandler())
-        var mods = chimmer.load(modDirectory, plugins, false)
+        var mods = chimmer.load(modDirectory, plugins,  ModsToLoad.SKIP_BETHESDA_MODS)
         val newMod = chimmer.merge("NewMod.esp", mods)
 
         // Then we should have all the records present

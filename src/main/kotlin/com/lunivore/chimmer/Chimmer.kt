@@ -5,6 +5,11 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileNotFoundException
 
+enum class ModsToLoad(val loadBethesdaMods : Boolean) {
+    LOAD_ALL(true),
+    SKIP_BETHESDA_MODS(false)
+}
+
 class Chimmer(val configuration : FileHandler = SensibleDefaultFileHandler()) {
 
     companion object {
@@ -18,30 +23,30 @@ class Chimmer(val configuration : FileHandler = SensibleDefaultFileHandler()) {
 
 
 
-    fun load(reallyLoadBethesdaFiles: Boolean): List<Mod> {
+    fun load(modsToLoad : ModsToLoad): List<Mod> {
         val skyrimFolder = configuration.findSkyrimFolder()
         val modsFolder = File(skyrimFolder, "Data")
         val pluginsTxtFile = configuration.findLoadOrderFile()
 
-        return load(modsFolder, pluginsTxtFile, reallyLoadBethesdaFiles)
+        return load(modsFolder, pluginsTxtFile, modsToLoad)
     }
 
-    fun load(modFolder: File, loadOrder: File, reallyLoadBethesdaFiles: Boolean): List<Mod> {
-        return load(modFolder, loadOrder.readLines(), reallyLoadBethesdaFiles)
+    fun load(modFolder: File, loadOrder: File, modsToLoad: ModsToLoad): List<Mod> {
+        return load(modFolder, loadOrder.readLines(), modsToLoad)
     }
 
     fun load(modFolder: File, loadOrderFile: File): List<Mod> {
         return load(modFolder, loadOrderFile.readLines())
     }
 
-    fun load(modFolder: File, loadOrder: List<ModFilename>, reallyLoadBethesdaFiles : Boolean = true): List<Mod> {
+    fun load(modFolder: File, loadOrder: List<ModFilename>, modsToLoad: ModsToLoad = ModsToLoad.LOAD_ALL): List<Mod> {
         lastSeenLoadOrder = loadOrder
         if (!modFolder.exists()) {
             throw FileNotFoundException("Could not find mod folder '${modFolder.absolutePath}'")
         }
 
         return loadOrder.filterNot { it.startsWith("#") }
-                .filter { reallyLoadBethesdaFiles || !BETHESDA_FILES.contains(it) }
+                .filter { modsToLoad.loadBethesdaMods || !BETHESDA_FILES.contains(it) }
                 .map {
             val matchingFiles = modFolder.listFiles { _, name -> name == it }
             if (matchingFiles.isEmpty()) {

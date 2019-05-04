@@ -4,9 +4,7 @@ import com.lunivore.chimmer.binary.ModBinary
 import com.lunivore.chimmer.testheplers.asResourceFile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.Test
-import org.junit.rules.TemporaryFolder
 import java.io.File
 
 
@@ -38,7 +36,7 @@ class SynchronizingFormIdsAndMasterFiles()  : ChimmerScenario() {
         val plugins = listOf("Skyrim.esm", "IronSword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
         val chimmer = Chimmer(fileHandler())
-        var mods = chimmer.load(modDirectory, plugins, false)
+        var mods = chimmer.load(modDirectory, plugins,  ModsToLoad.SKIP_BETHESDA_MODS)
 
         val sword1 = mods[0].weapons.first().copyAsNew()
         val modName1 = "IronSword1_${System.currentTimeMillis()}.esp"
@@ -54,7 +52,7 @@ class SynchronizingFormIdsAndMasterFiles()  : ChimmerScenario() {
         // When we load them and merge those two weapons into one new mod which overrides them
         // (we need to copy the Iron Sword across too)
         asResourceFile("IronSword.esp").copyTo(File(outputFolder.root, "IronSword.esp"))
-        val reloadedMods = chimmer.load(outputFolder.root, listOf("Skyrim.esm", "IronSword.esp", modName1, modName2), false)
+        val reloadedMods = chimmer.load(outputFolder.root, listOf("Skyrim.esm", "IronSword.esp", modName1, modName2),  ModsToLoad.SKIP_BETHESDA_MODS)
 
 
         val mergedModName = "IronSwords_${System.currentTimeMillis()}.esp"
@@ -80,7 +78,7 @@ class SynchronizingFormIdsAndMasterFiles()  : ChimmerScenario() {
         val plugins = listOf("Skyrim.esm", "Dawnguard.esm", "IronSword.esp", "ArmorBootsSwordCrossbow.esp", "MiscellaneousKeyword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
         var chimmer = Chimmer(fileHandler())
-        val mods = chimmer.load(modDirectory, plugins, false)
+        val mods = chimmer.load(modDirectory, plugins,  ModsToLoad.SKIP_BETHESDA_MODS)
 
         // When we add the crossbow, then the sword with a keyword from another mod and save it as a new mod
         // (we need to add the crossbow to force update the ids)
@@ -101,7 +99,7 @@ class SynchronizingFormIdsAndMasterFiles()  : ChimmerScenario() {
 
         val newModList = listOf("Skyrim.esm", "Dawnguard.esm", "IronSword.esp", "MiscellaneousKeyword.esp", newModName)
         chimmer = Chimmer(fileHandler())
-        val reloadedMods = chimmer.load(outputFolder.root, newModList, false)
+        val reloadedMods = chimmer.load(outputFolder.root, newModList,  ModsToLoad.SKIP_BETHESDA_MODS)
 
         // Then the keyword should be updated to reflect the position in the new masterlist
         // (Remember we don't actually load Skyrim or Dawnguard!)
