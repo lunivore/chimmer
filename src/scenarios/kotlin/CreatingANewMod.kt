@@ -10,18 +10,14 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 
 @UseExperimental(ExperimentalUnsignedTypes::class)
-class CreatingANewMod {
-
-    @get:Rule
-    val outputFolder = TemporaryFolder()
-
+class CreatingANewMod : ChimmerScenario() {
 
     @Test
     fun `should be able to create a new mod with the contents of an old one`() {
         // Given we loaded a mod with an iron sword in
         val plugins = listOf("Skyrim.esm", "IronSword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
-        val chimmer = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder())
+        val chimmer = Chimmer(fileHandler())
         var mods = chimmer.load(modDirectory, plugins, false)
 
         // When we parse a new mod with the same iron sword
@@ -45,7 +41,7 @@ class CreatingANewMod {
 
         val plugins = listOf("Skyrim.esm", "IronSword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
-        val chimmer = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder())
+        val chimmer = Chimmer(fileHandler())
         var mods = chimmer.load(modDirectory, plugins, false)
 
         // When we create a new mod with a copy of that sword that's not an override
@@ -63,7 +59,7 @@ class CreatingANewMod {
         assertTrue(File(outputFolder.root, "chimmer/${modName}_consistency.txt").exists())
 
         // When we reload the mod again
-        mods = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder()).load(outputFolder.root, listOf("Skyrim.esm", modName), false)
+        mods = Chimmer(fileHandler()).load(outputFolder.root, listOf("Skyrim.esm", modName), false)
 
         // Then the sword should have the same ID
         val reloadedSwordId = newMod.weapons.first().formId

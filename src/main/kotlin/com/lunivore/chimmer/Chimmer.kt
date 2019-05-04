@@ -5,9 +5,7 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileNotFoundException
 
-class Chimmer(val outputFolder: File = File("."),
-              private val consistencyFileHandler: ConsistencyFileHandler = ConsistencyFileHandler(outputFolder),
-              private val skyrimFinder: SkyrimFinder = SkyrimFinder()) {
+class Chimmer(val configuration : FileHandler = SensibleDefaultFileHandler()) {
 
     companion object {
         val BETHESDA_FILES : List<String> =
@@ -21,9 +19,9 @@ class Chimmer(val outputFolder: File = File("."),
 
 
     fun load(reallyLoadBethesdaFiles: Boolean): List<Mod> {
-        val skyrimFolder = skyrimFinder.findSkyrimFolder()
+        val skyrimFolder = configuration.findSkyrimFolder()
         val modsFolder = File(skyrimFolder, "Data")
-        val pluginsTxtFile = skyrimFinder.findLoadOrderFile()
+        val pluginsTxtFile = configuration.findLoadOrderFile()
 
         return load(modsFolder, pluginsTxtFile, reallyLoadBethesdaFiles)
     }
@@ -60,16 +58,16 @@ class Chimmer(val outputFolder: File = File("."),
      */
     fun save(mod: Mod, loadOrderForMasters: List<ModFilename> = lastSeenLoadOrder) {
 
-        val accessor = consistencyFileHandler.recorderFor(mod.name)
+        val accessor = configuration.recorderFor(mod.name)
 
-        val newFile = File(outputFolder, mod.name)
+        val newFile = File(configuration.outputFolder, mod.name)
         newFile.createNewFile()
 
         val bytes = ByteArrayOutputStream()
         mod.renderTo(loadOrderForMasters, accessor) { bytes.write(it) }
         newFile.writeBytes(bytes.toByteArray())
 
-        consistencyFileHandler.saveConsistency(mod.name)
+        configuration.saveConsistency(mod.name)
     }
 
     fun createMod(modName: String): Mod {

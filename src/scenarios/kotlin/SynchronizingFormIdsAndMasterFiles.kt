@@ -10,17 +10,14 @@ import org.junit.rules.TemporaryFolder
 import java.io.File
 
 
-class SynchronizingFormIdsAndMasterFiles() {
-
-    @get:Rule
-    val outputFolder = TemporaryFolder()
+class SynchronizingFormIdsAndMasterFiles()  : ChimmerScenario() {
 
     @Test
     fun `should provide the masterlist of a new mod`() {
         // Given a mod with Skyrim's iron sword and Dawnguard's crossbow as overrides
         val plugins = listOf("IronSword.esp", "ArmorBootsSwordCrossbow.esp")
         val modDirectory = asResourceFile("IronSword.esp").parentFile
-        val chimmer = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder())
+        val chimmer = Chimmer(fileHandler())
         val mods = chimmer.load(modDirectory, plugins)
         val newMod = chimmer.createMod("NewMod.esp").withWeapons(listOf(
                 mods[0].weapons[0],
@@ -40,7 +37,7 @@ class SynchronizingFormIdsAndMasterFiles() {
         // Given two mods which both have an iron sword copied as a new record
         val plugins = listOf("Skyrim.esm", "IronSword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
-        val chimmer = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder())
+        val chimmer = Chimmer(fileHandler())
         var mods = chimmer.load(modDirectory, plugins, false)
 
         val sword1 = mods[0].weapons.first().copyAsNew()
@@ -82,7 +79,7 @@ class SynchronizingFormIdsAndMasterFiles() {
         // Given a mod with an Iron Sword in it and another with a crossbow
         val plugins = listOf("Skyrim.esm", "Dawnguard.esm", "IronSword.esp", "ArmorBootsSwordCrossbow.esp", "MiscellaneousKeyword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
-        var chimmer = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder())
+        var chimmer = Chimmer(fileHandler())
         val mods = chimmer.load(modDirectory, plugins, false)
 
         // When we add the crossbow, then the sword with a keyword from another mod and save it as a new mod
@@ -103,7 +100,7 @@ class SynchronizingFormIdsAndMasterFiles() {
         File(modDirectory, "MiscellaneousKeyword.esp").copyTo(File(outputFolder.root, "MiscellaneousKeyword.esp"))
 
         val newModList = listOf("Skyrim.esm", "Dawnguard.esm", "IronSword.esp", "MiscellaneousKeyword.esp", newModName)
-        chimmer = Chimmer(outputFolder.root, skyrimFinder = SkyrimFinder())
+        chimmer = Chimmer(fileHandler())
         val reloadedMods = chimmer.load(outputFolder.root, newModList, false)
 
         // Then the keyword should be updated to reflect the position in the new masterlist

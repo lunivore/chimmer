@@ -6,10 +6,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
-class MergingMods {
-
-    @get:Rule
-    val outputFolder = TemporaryFolder()
+class MergingMods : ChimmerScenario() {
 
     @Test
     fun `should be able to merge mods, taking the last loaded record`() {
@@ -18,7 +15,7 @@ class MergingMods {
         val modDirectory = asResourceFile("plugins.txt").parentFile
 
         // When we load them using that order, then merge them
-        val chimmer = Chimmer(outputFolder.root)
+        val chimmer = Chimmer(fileHandler())
         var mods = chimmer.load(modDirectory, plugins, false)
         val newMod = chimmer.merge("NewMod.esp", mods)
 
