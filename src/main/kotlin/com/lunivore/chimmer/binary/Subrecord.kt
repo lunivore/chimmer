@@ -4,24 +4,10 @@ import com.lunivore.chimmer.FormId
 import org.apache.logging.log4j.LogManager
 
 @UseExperimental(ExperimentalUnsignedTypes::class)
-data class Subrecord(val type: String, val bytes: List<Byte>) {
-    fun renderTo(renderer: (ByteArray) -> Unit) {
-        renderer(type.toByteArray())
-        renderer(bytes.size.toShort().toLittleEndianBytes())
-        renderer(bytes.toByteArray())
-    }
 
-    fun asString(): String {
-        return String(bytes.toByteArray()).trimEnd('\u0000')
-    }
-
-    fun asFloat(): Float {
-        return bytes.subList(0, 4).toLittleEndianFloat()
-    }
-
-    fun asFormId(loadingMod: String?, masters: List<String>): FormId? {
-        return FormId(loadingMod, bytes.toLittleEndianUInt(), masters)
-    }
+interface Subrecord {
+    val type: String
+    val bytes: List<Byte>
 
     companion object {
         @JvmStatic
@@ -43,12 +29,46 @@ data class Subrecord(val type: String, val bytes: List<Byte>) {
 
                 if (rest.size < 6 + length) return ParseResult(listOf(), listOf(), "Failed to parse subrecord of type $type")
 
-                subrecords.add(Subrecord(type, rest.subList(6, 6 + length)))
+                subrecords.add(ByteSub.create(type, rest.subList(6, 6 + length)))
                 rest = if (rest.size <= 6 + length) listOf() else rest.subList(6 + length, rest.size)
             }
 
             return ParseResult(subrecords, rest)
         }
 
+        fun create(type: String, bytes: List<Byte>) : Subrecord = ByteSub.create(type, bytes)
     }
+
+    fun renderTo(renderer: (ByteArray) -> Unit)
+
+    fun asString(): String
+    fun asFloat(): Float
+    fun asFormId(loadingMod: String?, masters: List<String>): FormId?
+}
+
+data class ByteSub private constructor(override val type: String, override val bytes: List<Byte>) : Subrecord{
+    companion object{
+        fun create(type: String, bytes: List<Byte>): Subrecord {
+            return ByteSub(type, bytes)
+        }
+    }
+
+    override fun renderTo(renderer: (ByteArray) -> Unit) {
+        renderer(type.toByteArray())
+        renderer(bytes.size.toShort().toLittleEndianBytes())
+        renderer(bytes.toByteArray())
+    }
+
+    override fun asString(): String {
+        return String(bytes.toByteArray()).trimEnd('\u0000')
+    }
+
+    override fun asFloat(): Float {
+        return bytes.subList(0, 4).toLittleEndianFloat()
+    }
+
+    override fun asFormId(loadingMod: String?, masters: List<String>): FormId? {
+        return FormId(loadingMod, bytes.toLittleEndianUInt(), masters)
+    }
+
 }

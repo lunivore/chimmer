@@ -44,7 +44,7 @@ class SubrecordTest {
     @Test
     fun `should be able to turn contents into a string`() {
         // Given a CNAM record with content "Chimmer"
-        val cnam = Subrecord("CNAM", "43 68 69 6D 6D 65 72 00".fromHexStringToByteList())
+        val cnam = Subrecord.create("CNAM", "43 68 69 6D 6D 65 72 00".fromHexStringToByteList())
 
         // When we ask for it as a string
         val text = cnam.asString()

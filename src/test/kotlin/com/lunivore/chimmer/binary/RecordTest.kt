@@ -70,7 +70,7 @@ class RecordTest {
 
         // When we parse it
         try {
-            val result = Record.parseAll("Wibble.esp", badHex.fromHexStringToByteList(), listOf("Skyrim.esm"))
+            Record.parseAll("Wibble.esp", badHex.fromHexStringToByteList(), listOf("Skyrim.esm"))
             fail()
         } catch (e: IllegalStateException) {
             // Then it should have thrown an exception
@@ -110,7 +110,7 @@ class RecordTest {
         val record = Record.parseAll("Wibble.esp", hex.fromHexStringToByteList(), listOf("Skyrim.esm")).parsed[0]
 
         // When we copy the record as new
-        val newRecord = record.with(Subrecord("EDID", "MY_MOD_Editor_Id_123456\u0000".toByteList())).copyAsNew()
+        val newRecord = record.with(Subrecord.create("EDID", "MY_MOD_Editor_Id_123456\u0000".toByteList())).copyAsNew()
 
         // Then the raw should show that it's new
         assertTrue(newRecord.isNew())
@@ -139,7 +139,7 @@ class RecordTest {
         val record = Record.parseAll("Wibble.esp", hex.fromHexStringToByteList(), listOf("Skyrim.esm")).parsed[0]
 
         // When we change the EDID record
-        val changedRecord = record.with(Subrecord("EDID", "MY_MOD_Editor_Id_123456\u0000".toByteList()))
+        val changedRecord = record.with(Subrecord.create("EDID", "MY_MOD_Editor_Id_123456\u0000".toByteList()))
 
         // Then it should be a copy but with the new EDID field.
         assertEquals("MY_MOD_Editor_Id_123456", changedRecord.find("EDID")?.asString())
@@ -153,7 +153,7 @@ class RecordTest {
 
         // When we add another weapon as a template
         val template = 0x010b0c0du.toLittleEndianBytes().toList()
-        val changedRecord = record.with(Subrecord("CNAM", template))
+        val changedRecord = record.with(Subrecord.create("CNAM", template))
 
         // Then it should be a copy but with the template added.
         assertEquals(template, changedRecord.find("CNAM")?.bytes)

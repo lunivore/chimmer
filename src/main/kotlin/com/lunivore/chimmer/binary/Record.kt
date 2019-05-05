@@ -54,7 +54,7 @@ data class Record private constructor(val type: String, val flags: UInt, val for
         }
 
         fun parseAll(modName: String, bytes: List<Byte>, masters: List<String>): ParseResult<List<Record>> {
-            if (bytes.size == 0) return ParseResult(listOf(), bytes)
+            if (bytes.isEmpty()) return ParseResult(listOf(), bytes)
 
             val records = mutableListOf<Record>()
             var rest = bytes
@@ -124,12 +124,12 @@ data class Record private constructor(val type: String, val flags: UInt, val for
         fun createTes4(): Record {
 
             val tes4subrecords = listOf(
-                    Subrecord("HEDR", listOf(
+                    Subrecord.create("HEDR", listOf(
                             1.7f.toLittleEndianBytes().toList(),
                             0.toLittleEndianBytes().toList(),
                             1024.toLittleEndianBytes().toList()).flatten()),
-                    Subrecord("CNAM", "Chimmer\u0000".toByteArray().toList()),
-                    Subrecord("SNAM", "\u0000".toByteArray().toList()))
+                    Subrecord.create("CNAM", "Chimmer\u0000".toByteArray().toList()),
+                    Subrecord.create("SNAM", "\u0000".toByteArray().toList()))
             return Record("TES4", 0u, FormId(null, 0u, listOf()), OLDRIM_VERSION, null, tes4subrecords, listOf())
         }
 
@@ -194,7 +194,7 @@ data class Record private constructor(val type: String, val flags: UInt, val for
 
     private fun tes4SubrecordsWithMastDataPairs(newMasters: List<String>): List<Subrecord> {
         val masterRecords = newMasters.flatMap {
-            listOf( Subrecord("MAST", "$it\u0000".toByteList()), Subrecord("DATA", listOf())) }
+            listOf( Subrecord.create("MAST", "$it\u0000".toByteList()), Subrecord.create("DATA", listOf())) }
         val subrecordsToRender : List<Subrecord> = (listOf("HEDR", "CNAM", "SNAM").map { find(it)} +
                 masterRecords + listOf("ONAM", "INTV", "INCC").map { find(it)}).filterNotNull()
         return subrecordsToRender
