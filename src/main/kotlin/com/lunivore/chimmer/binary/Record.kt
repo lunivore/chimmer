@@ -25,6 +25,11 @@ data class Record private constructor(val type: String, val flags: UInt, val for
 
     companion object {
         private val OLDRIM_VERSION = 43.toUShort()
+
+        private val SUBRECORDS_BY_RECORD_TYPE = mapOf(
+                "WEAP" to "EDID, VMAD, OBND, FULL, MODL, MODS, EITM, EAMT, ETYP, BIDS, BAMT, YNAM, ZNAM, KSIZ, KWDA, DESC, INAM, WNAM, SNAM, XNAM, NAM7, TNAM, UNAM, NAM9, NAM8, DATA, DNAM, CRDT, VNAM, CNAM".split(", ")
+        )
+
         val RECORD_HEADER_SIZE = 24
         val logger by Logging()
 
@@ -233,8 +238,17 @@ data class Record private constructor(val type: String, val flags: UInt, val for
     }
 
     fun with(newSubrecord: Subrecord): Record {
-        val newSubrecords = subrecords.map { if (it.type == newSubrecord.type) newSubrecord else it }
-        return copy(recordBytes = null, lazySubrecords = newSubrecords)
+        if (subrecords.find { it.type == newSubrecord.type } != null) {
+            val newSubrecords = subrecords.map { if (it.type == newSubrecord.type) newSubrecord else it }
+            return copy(recordBytes = null, lazySubrecords = newSubrecords)
+        } else {
+            if (!SUBRECORDS_BY_RECORD_TYPE.containsKey(type) ||
+                    !SUBRECORDS_BY_RECORD_TYPE[type]!!.contains(newSubrecord.type)) {
+                throw IllegalArgumentException("Cannot find order for new subrecord $type/${newSubrecord.type}")
+            }
+            val newSubrecords = subrecords.plus(newSubrecord).sortedBy { SUBRECORDS_BY_RECORD_TYPE[type]!!.indexOf(it.type) }
+            return copy(recordBytes = null, lazySubrecords = newSubrecords)
+        }
     }
 
     fun isNew(): Boolean {

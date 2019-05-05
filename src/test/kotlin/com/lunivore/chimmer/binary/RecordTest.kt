@@ -146,6 +146,20 @@ class RecordTest {
     }
 
     @Test
+    fun `should be able to add subrecords if not found`() {
+        // Given a record containing an iron sword
+        val hex = Hex.IRON_SWORD_WEAPON
+        val record = Record.parseAll("Wibble.esp", hex.fromHexStringToByteList(), listOf("Skyrim.esm")).parsed[0]
+
+        // When we add another weapon as a template
+        val template = 0x010b0c0du.toLittleEndianBytes().toList()
+        val changedRecord = record.with(Subrecord("CNAM", template))
+
+        // Then it should be a copy but with the template added.
+        assertEquals(template, changedRecord.find("CNAM")?.bytes)
+    }
+
+    @Test
     fun `should convert its own FormId for a new masterlist`() {
         // Given a record containing an iron sword
         val hex = Hex.IRON_SWORD_WEAPON

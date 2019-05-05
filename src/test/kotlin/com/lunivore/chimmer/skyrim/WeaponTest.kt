@@ -95,6 +95,35 @@ class WeaponTest {
 
     }
 
+    @Test
+    fun `should allow us to view and change other aspects of a Weapon`() {
+        // Given an iron sword loaded as a weapon
+        val masters = listOf("Skyrim.esm", "Dawnguard.esm")
+        val sword = Weapon(Record.parseAll("MyMod.esp",
+                Hex.IRON_SWORD_WEAPON.fromHexStringToByteList(),
+                masters).parsed[0])
+
+        // And a crossbow that we're going to steal bits from
+        val crossbow = Weapon(Record.parseAll("MyMod.esp",
+                Hex.CROSSBOW_WEAPON.fromHexStringToByteList(),
+                masters).parsed[0])
+
+        // When we change certain values of the iron sword
+        val newSword = sword
+                .withTemplate(crossbow.formId)
+                .withDamage((sword.damage * 2u).toUShort())
+                .withReach(sword.reach * 1.5f)
+                .withSpeed(sword.speed * 3.0f)
+                .withFlags(Weapon.Flags.CANT_DROP)
+
+        // Then the changes should be consistent
+        assertEquals(crossbow.formId.toBigEndianHexString(), newSword.template?.toBigEndianHexString())
+
+        // And we should be able to view things that would normally be read-only
+        assertEquals(Weapon.WeaponType.ONE_HAND_SWORD, newSword.weaponType)
+    }
+
+
     private fun parseIronSword(masters: List<String>): Weapon {
         return Weapon(Record.parseAll("MyMod.esp",
                 Hex.IRON_SWORD_WEAPON.fromHexStringToByteList(),

@@ -1,5 +1,6 @@
 package com.lunivore.chimmer.binary
 
+import com.lunivore.chimmer.FormId
 import org.apache.logging.log4j.LogManager
 
 @UseExperimental(ExperimentalUnsignedTypes::class)
@@ -16,6 +17,10 @@ data class Subrecord(val type: String, val bytes: List<Byte>) {
 
     fun asFloat(): Float {
         return bytes.subList(0, 4).toLittleEndianFloat()
+    }
+
+    fun asFormId(loadingMod: String?, masters: List<String>): FormId? {
+        return FormId(loadingMod, bytes.toLittleEndianUInt(), masters)
     }
 
     companion object {
