@@ -1,7 +1,6 @@
 package com.lunivore.chimmer.skyrim
 
 import com.lunivore.chimmer.FormId
-import com.lunivore.chimmer.binary.ByteSub
 import com.lunivore.chimmer.binary.Record
 import com.lunivore.chimmer.binary.Subrecord
 import com.lunivore.chimmer.binary.fromHexStringToByteList
@@ -20,7 +19,7 @@ class WeaponTest {
         val weapon = parseIronSword(masters)
 
         // Then it should have the relevant keywords
-        val expectedKeywords = listOf(0x0001e711u, 0x0001e718u, 0x0008f958u).map { FormId("MyMod.esp", it, masters) }
+        val expectedKeywords = listOf(0x0001e711u, 0x0001e718u, 0x0008f958u).map { FormId.create("MyMod.esp", it, masters) }
         assertEquals(expectedKeywords, weapon.keywords)
 
     }
@@ -33,13 +32,13 @@ class WeaponTest {
 
         // When we add a new keyword from another mod (note it has a loadingMod set, but its index is beyond
         // the masters so NewKeywords.esp is its master)
-        val newKeyword = FormId("NewKeywords.esp", 0x010a0b0cu, listOf("Skyrim.esm"))
+        val newKeyword = FormId.create("NewKeywords.esp", 0x010a0b0cu, listOf("Skyrim.esm"))
         val newWeapon = weapon.withKeywords(weapon.keywords.plus(newKeyword))
 
         // Then our new weapon should have all the keywords
         val newMasters = listOf("Skyrim.esm", "Miscellaneous.esp", "NewKeywords.esp")
-        val expectedKeywords = listOf(0x0001e711u, 0x0001e718u, 0x0008f958u).map { FormId("MyMod.esp", it, newMasters) }
-                .plus(FormId("MyMod.esp", 0x020a0b0cu, newMasters))
+        val expectedKeywords = listOf(0x0001e711u, 0x0001e718u, 0x0008f958u).map { FormId.create("MyMod.esp", it, newMasters) }
+                .plus(FormId.create("MyMod.esp", 0x020a0b0cu, newMasters))
         assertEquals(expectedKeywords, newWeapon.keywords)
 
         // And the underlying record should have both the KWDA and KSIZ records set correctly
@@ -68,7 +67,7 @@ class WeaponTest {
                 .with(Subrecord.create("ETYP", "0C 0B 0A 02".fromHexStringToByteList())))
 
         // When we add a new keyword (which requires a new master)
-        val newKeyword = FormId("NewKeywords.esp", 0x010a0b0cu, listOf("Skyrim.esm"))
+        val newKeyword = FormId.create("NewKeywords.esp", 0x010a0b0cu, listOf("Skyrim.esm"))
         val newWeapon = weapon.withKeywords(weapon.keywords.plus(newKeyword))
 
         // Then the ETYP record should have had its index changed too
@@ -87,7 +86,7 @@ class WeaponTest {
 
 
         // When we add a keyword to force remastering
-        val newKeyword = FormId("NewKeywords.esp", 0x010a0b0cu, listOf("Skyrim.esm"))
+        val newKeyword = FormId.create("NewKeywords.esp", 0x010a0b0cu, listOf("Skyrim.esm"))
         val newWeapon = weapon.withKeywords(weapon.keywords.plus(newKeyword))
 
         // Then the CRDT record should have been updated too

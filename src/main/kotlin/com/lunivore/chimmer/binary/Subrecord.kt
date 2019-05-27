@@ -68,7 +68,7 @@ data class ByteSub private constructor(override val type: String, override val b
     }
 
     override fun asFormId(loadingMod: String?, masters: List<String>): FormId? {
-        return FormId(loadingMod, bytes.toLittleEndianUInt(), masters)
+        return FormId.create(loadingMod, bytes.toLittleEndianUInt(), masters)
     }
 
 }

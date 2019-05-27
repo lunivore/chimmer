@@ -8,7 +8,7 @@ class FormIdTest {
     @Test
     fun `should provide its master file as a string`() {
         // Given a rawFormId with an index of 01 and a masterlist of Skyrim, Dawnguard, and another
-        val formId = FormId(null, 0x01abababu, "Skyrim.esm, Dawnguard.esm, ANOther.esp".split(", "))
+        val formId = FormId.create(null, 0x01abababu, "Skyrim.esm, Dawnguard.esm, ANOther.esp".split(", "))
 
         // When we ask it for its master
         // Then it should correctly identify as Dawnguard
@@ -18,7 +18,7 @@ class FormIdTest {
     @Test
     fun `should provide the loading mod as the master file if the master is the current mod`() {
         // Given a rawFormId with an index of 03 and a masterlist of Skyrim, Dawnguard, and another
-        val formId = FormId("Current.esp", 0x03abababu, "Skyrim.esm, Dawnguard.esm, ANOther.esp".split(", "))
+        val formId = FormId.create("Current.esp", 0x03abababu, "Skyrim.esm, Dawnguard.esm, ANOther.esp".split(", "))
 
         // When we ask it for its master
         // Then it should correctly identify the current mod as the master and provide it
@@ -35,16 +35,10 @@ class FormIdTest {
     }
 
     @Test
-    fun `should allow construction of the TES4 FormId`() {
-         // When we create the TES4 FormId then no error should show even though it has no masterlist and no loading mod
-        FormId(null, 0x00000000u, listOf())
-    }
-
-    @Test
     fun `should throw an IllegalArgumentException if it's created without an appropriate master`() {
         // When we try to create a rawFormId with an index of 03 and a masterlist of Skyrim, Dawnguard, and another
         try {
-            FormId(null, 0x03abababu, "Skyrim.esm, Dawnguard.esm, ANOther.esp".split(", "))
+            FormId.create(null, 0x03abababu, "Skyrim.esm, Dawnguard.esm, ANOther.esp".split(", "))
             fail("Should have thrown an exception")
         } catch (e: IllegalArgumentException) {
             // expected
@@ -56,7 +50,7 @@ class FormIdTest {
         // When we try to create a rawFormId with an index of 04 and a masterlist of Skyrim, Dawnguard, and another
         // (note that 03 would denote the loading mod as master)
         try {
-            FormId("Current.esp", 0x04abababu, "Skyrim.esm, Dawnguard.esm, ANOther.esp".split(", "))
+            FormId.create("Current.esp", 0x04abababu, "Skyrim.esm, Dawnguard.esm, ANOther.esp".split(", "))
             fail("Should have thrown an exception")
         } catch (e: IllegalArgumentException) {
             // expected
@@ -64,19 +58,9 @@ class FormIdTest {
     }
 
     @Test
-    fun `should provide the raw indexed form id as a unit or bytes`() {
-        // Given a form Id
-        val formId = FormId("Current.esp", 0x010a0b0cu, listOf("Skyrim.esm"))
-
-        // Then it should be available as a uint or bytes
-        assertEquals(0x010a0b0cu, formId.raw)
-        assertEquals(byteArrayOf(0x0c, 0x0b, 0x0a, 0x01).toList(), formId.rawBytes.toList()) // No byteArray equality!?
-    }
-
-    @Test
     fun `should provide a readable version of the indexed formId`() {
         // Given a form Id
-        val formId = FormId("Current.esp", 0x010a0b0cu, listOf("Skyrim.esm"))
+        val formId = FormId.create("Current.esp", 0x010a0b0cu, listOf("Skyrim.esm"))
 
         // Then it should be readable
         assertEquals("010A0B0C", formId.toBigEndianHexString())
@@ -85,7 +69,7 @@ class FormIdTest {
     @Test
     fun `should tell us if it's a new FormId`() {
         // Given an existing FormId, then it should not be new
-        assertFalse(FormId("Current.esp", 0x00345678u, listOf()).isNew())
+        assertFalse(FormId.create("Current.esp", 0x00345678u, listOf()).isNew())
 
         // Given a FormId created for a new record, then it should be new
         assertTrue(FormId.createNew(listOf("Skyrim.esm")).isNew())
@@ -94,7 +78,7 @@ class FormIdTest {
     @Test
     fun `should give us the unindexed FormId`() {
         // Given a FormId with an index
-        val formId = FormId(null, 0x01abcdefu, listOf("Skyrim.esm", "Dawnguard.esm"))
+        val formId = FormId.create(null, 0x01abcdefu, listOf("Skyrim.esm", "Dawnguard.esm"))
 
         // When we ask for the unindexed bit then it should lose the first byte
         assertEquals(0x00abcdefu, formId.unindexed)
@@ -103,7 +87,7 @@ class FormIdTest {
     @Test
     fun `should provide a reindexed list of bytes for a new master file for a new mod`() {
         // Given a FormId with an index that's found in the masterlist
-        val formId = FormId(null, 0x01abcdefu, listOf("Skyrim.esm", "MiscellaneousKeyword.esp"))
+        val formId = FormId.create(null, 0x01abcdefu, listOf("Skyrim.esm", "MiscellaneousKeyword.esp"))
 
         // When we ask for it to be reindexed for a new masterlist
         // (This happens when there are other records in the new mod that also have masters)
@@ -111,28 +95,28 @@ class FormIdTest {
         val reindexedFormId = formId.reindex(newMasters)
 
         // Then it should have the new index in the right place
-        val expectedFormId = FormId(null, 0x02abcdefu, newMasters)
+        val expectedFormId = FormId.create(null, 0x02abcdefu, newMasters)
         assertEquals(expectedFormId, reindexedFormId)
     }
 
     @Test
     fun `should be able to reindex for a new mod when the old mod was the master`() {
         // Given a FormId from an old mod (note 02 index denoting current mod as master)
-        val formId = FormId("OldMod.esp", 0x02abcdefu, listOf("Skyrim.esm", "MiscellaneousKeyword.esp"))
+        val formId = FormId.create("OldMod.esp", 0x02abcdefu, listOf("Skyrim.esm", "MiscellaneousKeyword.esp"))
 
         // When we ask for it to be reindexed for a new masterlist
         val newMasters = listOf("Skyrim.esm", "Dawnguard.esm", "MiscellaneousKeyword.esp", "OldMod.esp")
         val reindexedFormId = formId.reindex(newMasters)
 
         // Then it should find the old mod in the new masterlist and use that as the index
-        val expectedFormId = FormId(null, 0x03abcdefu, newMasters)
+        val expectedFormId = FormId.create(null, 0x03abcdefu, newMasters)
         assertEquals(expectedFormId, reindexedFormId)
     }
 
     @Test
     fun `should be able to reindex for a new mod when the old mod wasn't in the masters`() {
         // Given a FormId from an old mod (note 02 index denoting current mod as master)
-        val formId = FormId("OldMod.esp", 0x02abcdefu, listOf("Skyrim.esm", "MiscellaneousKeyword.esp"))
+        val formId = FormId.create("OldMod.esp", 0x02abcdefu, listOf("Skyrim.esm", "MiscellaneousKeyword.esp"))
 
         // When we ask for it to be reindexed for a new masterlist
         val newMasters = listOf("Skyrim.esm", "Dawnguard.esm", "MiscellaneousKeyword.esp")
@@ -140,7 +124,7 @@ class FormIdTest {
 
         // Then it should have added the loadng mod to the masters and used that
         val expectedMasters = listOf("Skyrim.esm", "Dawnguard.esm", "MiscellaneousKeyword.esp", "OldMod.esp")
-        val expectedFormId = FormId(null, 0x03abcdefu, expectedMasters)
+        val expectedFormId = FormId.create(null, 0x03abcdefu, expectedMasters)
         assertEquals(expectedFormId, reindexedFormId)
     }
 
@@ -166,12 +150,12 @@ class FormIdTest {
 
         // And formIds originating from different mods
         val formIds = listOf(
-                FormId("Skyrim.esm", 0x00aaaaaau, listOf("Skyrim.esm")),
-                FormId("Dawnguard.esm", 0x01ccccccu, listOf("Skyrim.esm","Dawnguard.esm")),
-                FormId("MyMod1.esp", 0x01bbbbbbu, listOf("Skyrim.esm", "Dawnguard.esm")),
-                FormId("MyMod2.esp", 0x02eeeeeeu, listOf("Skyrim.esm", "Dawnguard.esm", "MyMod1.esp")),
-                FormId("MyMod2.esp", 0x01ddddddu, listOf("Skyrim.esm", "Dawnguard.esm", "MyMod1.esp")),
-                FormId("MyMod2.esp", 0x03ffffffu, listOf("Skyrim.esm", "Dawnguard.esm", "MyMod1.esp"))
+                FormId.create("Skyrim.esm", 0x00aaaaaau, listOf("Skyrim.esm")),
+                FormId.create("Dawnguard.esm", 0x01ccccccu, listOf("Skyrim.esm","Dawnguard.esm")),
+                FormId.create("MyMod1.esp", 0x01bbbbbbu, listOf("Skyrim.esm", "Dawnguard.esm")),
+                FormId.create("MyMod2.esp", 0x02eeeeeeu, listOf("Skyrim.esm", "Dawnguard.esm", "MyMod1.esp")),
+                FormId.create("MyMod2.esp", 0x01ddddddu, listOf("Skyrim.esm", "Dawnguard.esm", "MyMod1.esp")),
+                FormId.create("MyMod2.esp", 0x03ffffffu, listOf("Skyrim.esm", "Dawnguard.esm", "MyMod1.esp"))
         )
 
         // When we sort those FormIds
@@ -186,7 +170,7 @@ class FormIdTest {
     @Test
     fun `should handle iDaysToRespawnVendor because WTF Bethesda why is there an index of 01 in Skyrim esm`() {
         // Given iDaysToRespawnVendor's formId
-        val iDaysToRespawnVendor = FormId("Skyrim.esm", 0x0123C00Eu, listOf())
+        val iDaysToRespawnVendor = FormId.create("Skyrim.esm", 0x0123C00Eu, listOf())
 
         // Then it should show Skyrim as its master
         assertEquals("Skyrim.esm", iDaysToRespawnVendor.master)
@@ -196,7 +180,7 @@ class FormIdTest {
         val reindexed = iDaysToRespawnVendor.reindex(newMasters)
 
         // Then it should have its formId reindexed to 0
-        assertEquals(FormId(null, 0x0023C00Eu, newMasters), reindexed)
+        assertEquals(FormId.create(null, 0x0023C00Eu, newMasters), reindexed)
     }
 }
 

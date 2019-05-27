@@ -45,7 +45,7 @@ data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
     val keywords: List<FormId>
             get(){
                 val kwda = record.find("KWDA") ?: return listOf()
-                return kwda.bytes.chunked(4).map { FormId(loadingMod, it.toLittleEndianUInt(), record.masters) }
+                return kwda.bytes.chunked(4).map { FormId.create(loadingMod, it.toLittleEndianUInt(), record.masters) }
             }
 
     val editorId: String
@@ -112,7 +112,7 @@ data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
                 .splitToSequence(", ").filterNot { it == skip }
 
         val reindexedSubs = subrecordsToReindex.map { record.find(it) }.filterNotNull()
-                .map { Pair(it, FormId(loadingMod, it.bytes.toLittleEndianUInt(), record.masters).reindex(newMasters)) }
+                .map { Pair(it, FormId.create(loadingMod, it.bytes.toLittleEndianUInt(), record.masters).reindex(newMasters)) }
                 .map { Subrecord.create(it.first.type, it.second.rawByteList)}
                 .plus(reindexCRDT(newMasters))
 
@@ -121,7 +121,7 @@ data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
 
     private fun reindexCRDT(newMasters: List<String>): List<Subrecord> {
         val crdt = record.find("CRDT") ?: return listOf()
-        val spellEffect = FormId(loadingMod, crdt.bytes.subList(12, 16).toLittleEndianUInt(), record.masters)
+        val spellEffect = FormId.create(loadingMod, crdt.bytes.subList(12, 16).toLittleEndianUInt(), record.masters)
         val reindexedSpellEffect = spellEffect.reindex(newMasters)
         return listOf(Subrecord.create("CRDT", crdt.bytes.subList(0, 12).plus(reindexedSpellEffect.rawByteList)))
     }

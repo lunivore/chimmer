@@ -103,7 +103,7 @@ class SynchronizingFormIdsAndMasterFiles()  : ChimmerScenario() {
 
         // Then the keyword should be updated to reflect the position in the new masterlist
         // (Remember we don't actually load Skyrim or Dawnguard!)
-        val expectedKeyword = FormId(newModName, 0x01000000u or keywordToAdd.unindexed, listOf("Skyrim.esm", "Dawnguard.esm", "MiscellaneousKeyword.esp"))
+        val expectedKeyword = FormId.create(newModName, 0x01000000u or keywordToAdd.unindexed, listOf("Skyrim.esm", "Dawnguard.esm", "MiscellaneousKeyword.esp"))
         val reloadedSword = reloadedMods[2].weapons[1]
         val actualKeyword = reloadedSword.keywords[3]
 

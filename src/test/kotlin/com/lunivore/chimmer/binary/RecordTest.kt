@@ -176,7 +176,7 @@ class RecordTest {
         val renderedHex = byteArray.toByteArray()
 
         val newRecord = Record.parseAll("Wibble.esp", renderedHex.toList(), listOf("Skyrim.esm")).parsed[0]
-        assertEquals(FormId("Wibble.esp", 0x01000000u or record.formId.unindexed, listOf("Skyrim.esm")),
+        assertEquals(FormId.create("Wibble.esp", 0x01000000u or record.formId.unindexed, listOf("Skyrim.esm")),
                 newRecord.formId)
     }
 
@@ -189,7 +189,7 @@ class RecordTest {
         // That's been copied as a new object to the new mod (so it has no master yet)
         // (Note that saving and reloading through Chimmer gives it the name of the mod that it's being loaded with;
         // note also that the masterlist here refers to internals of the Iron Sword and not the origin any more)
-        val newFormId = FormId("IronSword.esp", 0x01abcdefu, listOf("Skyrim.esm"))
+        val newFormId = FormId.create("IronSword.esp", 0x01abcdefu, listOf("Skyrim.esm"))
         val newRecord = record.copy(formId = newFormId)
 
         // When we ask it to render with a new list of masters that contains its own origin

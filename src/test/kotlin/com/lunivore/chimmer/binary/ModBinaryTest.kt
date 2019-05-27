@@ -1,5 +1,6 @@
 package com.lunivore.chimmer.binary
 
+import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.skyrim.SkyrimObject
 import com.lunivore.chimmer.testheplers.Hex
 import org.junit.Assert.*
@@ -79,7 +80,7 @@ class ModBinaryTest {
         // Then it should have all the appropriate fields set correctly in the TES4 record's header
         assertEquals("TES4", modBinary.header.type)
         assertEquals(0u, modBinary.header.flags)
-        assertEquals(0u, modBinary.header.formId.raw)
+        assertEquals(FormId.TES4, modBinary.header.formId)
         assertEquals(43.toUShort(), modBinary.header.formVersion) // Oldrim
         assertTrue(modBinary.grups.isEmpty())
 

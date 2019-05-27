@@ -130,7 +130,7 @@ data class Record private constructor(val type: String, val flags: UInt, val for
                             1024.toLittleEndianBytes().toList()).flatten()),
                     Subrecord.create("CNAM", "Chimmer\u0000".toByteArray().toList()),
                     Subrecord.create("SNAM", "\u0000".toByteArray().toList()))
-            return Record("TES4", 0u, FormId(null, 0u, listOf()), OLDRIM_VERSION, null, tes4subrecords, listOf())
+            return Record("TES4", 0u, FormId.TES4, OLDRIM_VERSION, null, tes4subrecords, listOf())
         }
 
     }
@@ -140,7 +140,7 @@ data class Record private constructor(val type: String, val flags: UInt, val for
             // or we'll derive it (e.g.: data size).
             this(String(headerBytes.subList(0, 4).toByteArray()), // Type
                     headerBytes.subList(8, 12).toLittleEndianUInt(),  // Flags
-                    FormId(modName, headerBytes.subList(12, 16).toLittleEndianUInt(), masters),  // FormId (indexed to given masters)
+                    FormId.create(modName, headerBytes.subList(12, 16).toLittleEndianUInt(), masters),  // FormId (indexed to given masters)
                     headerBytes.subList(20, 22).toLittleEndianUShort(), // Version; Oldrim = 43, SSE = 44
                     recordBytes, subrecords, masters)
 
