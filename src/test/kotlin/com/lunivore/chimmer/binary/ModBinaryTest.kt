@@ -15,6 +15,8 @@ class ModBinaryTest {
                 return SkyrimThing(record)
             }
         }
+
+        val menu = SkyrimSubrecordMenu()
     }
 
     @Test
@@ -46,7 +48,7 @@ class ModBinaryTest {
         val modBinary = ModBinary.parse("Wibble.esp", modBytes)
 
         // When we ask it to replace the weapons with a Dawnguard crossbow
-        val crossbowRecord = Record.parseAll("Wibble.esp", Hex.CROSSBOW_WEAPON.fromHexStringToByteList(), listOf("Dawnguard.esm")).parsed[0]
+        val crossbowRecord = RecordParser().parseAll("Wibble.esp", Hex.CROSSBOW_WEAPON.fromHexStringToByteList(), listOf("Dawnguard.esm")).parsed[0]
         val crossbow = SkyrimThing(crossbowRecord)
         val newModBinary = modBinary.createOrReplaceGrup("WEAP", listOf(crossbow))
 
@@ -63,7 +65,7 @@ class ModBinaryTest {
                 Grup("AMMO", listOf(), listOf())))
 
         // When we add the Dawnguard crossbow
-        val crossbowRecord = Record.parseAll("Wibble.esp", Hex.CROSSBOW_WEAPON.fromHexStringToByteList(), listOf("Dawnguard.esm")).parsed[0]
+        val crossbowRecord = RecordParser().parseAll("Wibble.esp", Hex.CROSSBOW_WEAPON.fromHexStringToByteList(), listOf("Dawnguard.esm")).parsed[0]
         val crossbow = SkyrimThing(crossbowRecord)
         val newModBinary = modBinary.createOrReplaceGrup("WEAP", listOf(crossbow))
 

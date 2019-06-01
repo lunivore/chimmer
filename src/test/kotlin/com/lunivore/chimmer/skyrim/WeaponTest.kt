@@ -2,6 +2,7 @@ package com.lunivore.chimmer.skyrim
 
 import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.binary.Record
+import com.lunivore.chimmer.binary.RecordParser
 import com.lunivore.chimmer.binary.Subrecord
 import com.lunivore.chimmer.binary.fromHexStringToByteList
 import com.lunivore.chimmer.testheplers.Hex
@@ -61,7 +62,7 @@ class WeaponTest {
         // Given an iron sword loaded as a weapon
         // With an ETYP from this mod
         val masters = listOf("Skyrim.esm", "Miscellaneous.esp")
-        val weapon = Weapon(Record.parseAll("MyMod.esp",
+        val weapon = Weapon(RecordParser().parseAll("MyMod.esp",
                 Hex.IRON_SWORD_WEAPON.fromHexStringToByteList(),
                 masters).parsed[0]
                 .with(Subrecord.create("ETYP", "0C 0B 0A 02".fromHexStringToByteList())))
@@ -79,7 +80,7 @@ class WeaponTest {
         // Given an iron sword loaded as a weapon
         // With a CRDT record we made up with a new crit effect
         val masters = listOf("Skyrim.esm", "Miscellaneous.esp")
-        val weapon = Weapon(Record.parseAll("MyMod.esp",
+        val weapon = Weapon(RecordParser().parseAll("MyMod.esp",
                 Hex.IRON_SWORD_WEAPON.fromHexStringToByteList(),
                 masters).parsed[0]
                 .with(Subrecord.create("CRDT", "09 00 00 00 00 00 80 3F 01 FF FF FF 0A 0B 0C 02".fromHexStringToByteList())))
@@ -99,12 +100,12 @@ class WeaponTest {
     fun `should allow us to view and change other aspects of a Weapon`() {
         // Given an iron sword loaded as a weapon
         val masters = listOf("Skyrim.esm", "Dawnguard.esm")
-        val sword = Weapon(Record.parseAll("MyMod.esp",
+        val sword = Weapon(RecordParser().parseAll("MyMod.esp",
                 Hex.IRON_SWORD_WEAPON.fromHexStringToByteList(),
                 masters).parsed[0])
 
         // And a crossbow that we're going to steal bits from
-        val crossbow = Weapon(Record.parseAll("MyMod.esp",
+        val crossbow = Weapon(RecordParser().parseAll("MyMod.esp",
                 Hex.CROSSBOW_WEAPON.fromHexStringToByteList(),
                 masters).parsed[0])
 
@@ -125,7 +126,7 @@ class WeaponTest {
 
 
     private fun parseIronSword(masters: List<String>): Weapon {
-        return Weapon(Record.parseAll("MyMod.esp",
+        return Weapon(RecordParser().parseAll("MyMod.esp",
                 Hex.IRON_SWORD_WEAPON.fromHexStringToByteList(),
                 masters).parsed[0])
     }

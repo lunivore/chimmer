@@ -4,7 +4,6 @@ import com.lunivore.chimmer.FormId
 import org.apache.logging.log4j.LogManager
 
 @UseExperimental(ExperimentalUnsignedTypes::class)
-
 interface Subrecord {
     val type: String
     val bytes: List<Byte>
@@ -13,13 +12,13 @@ interface Subrecord {
         @JvmStatic
         val logger = LogManager.getLogger(Subrecord::class.java)
 
-        fun parse(bytes: List<Byte>): ParseResult<List<Subrecord>> {
+        fun parse(menu: SubrecordMenu, bytes: List<Byte>): ParseResult<List<Subrecord>> {
             var rest = bytes
             val subrecords = mutableListOf<Subrecord>()
 
             // All subrecords have a 4-letter code, followed by a short (2 bytes) showing their length.
             // If we don't have at least 6 bytes, we're done.
-            if (rest.size < 6) return ParseResult(listOf(), listOf(), "Failed to parse subrecord")
+            if (rest.size < 6) return ParseResult(listOf(), listOf(), "Failed to parse subrecord") // TODO Should this be throwing an exception?
 
             while (rest.size > 5) {
                 val type = String(rest.subList(0, 4).toByteArray())
@@ -27,7 +26,7 @@ interface Subrecord {
 
                 logger.debug("Subrecord $type, length $length")
 
-                if (rest.size < 6 + length) return ParseResult(listOf(), listOf(), "Failed to parse subrecord of type $type")
+                if (rest.size < 6 + length) return ParseResult(listOf(), listOf(), "Failed to parse subrecord of type $type") // TODO Ditto
 
                 subrecords.add(ByteSub.create(type, rest.subList(6, 6 + length)))
                 rest = if (rest.size <= 6 + length) listOf() else rest.subList(6 + length, rest.size)

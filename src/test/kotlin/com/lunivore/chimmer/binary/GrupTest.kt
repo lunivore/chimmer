@@ -31,7 +31,7 @@ class GrupTest {
         val recordHex = Hex.IRON_SWORD_WEAPON + " " + Hex.CROSSBOW_WEAPON
         val recordBytes = recordHex.fromHexStringToByteList()
         val masters = listOf("Skyrim.esm", "Dawnguard.esm")
-        val grup = Grup("WEAP", groupHeaderBytes, Record.parseAll("Wibble.esp", recordBytes, masters).parsed)
+        val grup = Grup("WEAP", groupHeaderBytes, RecordParser().parseAll("Wibble.esp", recordBytes, masters).parsed)
 
         // When we render the group back to bytes again
         val renderer = ByteArrayOutputStream()

@@ -4,7 +4,6 @@ import com.lunivore.chimmer.ConsistencyRecorder
 import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.FormIdKeyComparator
 import com.lunivore.chimmer.binary.ModBinary.Companion.GRUP_ORDER
-import com.lunivore.chimmer.binary.Record.Companion.consistencyRecorderForTes4
 
 
 // TODO: Recalculate next available object id (highest + 1024), number of records and groups, and the masterlist.
@@ -30,13 +29,17 @@ data class ModBinary(val modName: String?, val header: Record, val grups: List<G
             DUAL, SNCT, SOPM, COLL, CLFM, REVB
         """)
 
+        private val consistencyRecorderForTes4: ConsistencyRecorder = {
+            throw IllegalStateException("TES4 records should always have form id of 0")
+        }
 
         private fun fromCommaDelimitedToList(grupList: String) =
                 grupList.lines().joinToString("").split(",").map {it.trim()}
 
         fun parse(loadingMod: String, bytes: ByteArray): ModBinary {
+            val menu = SkyrimSubrecordMenu()
 
-            val result = Record.parseTes4(loadingMod, bytes.toList())
+            val result = RecordParser().parseTes4(loadingMod, bytes.toList())
 
             val headerRecord = result.parsed
             val grups = Grup.parseAll(loadingMod, result.rest, headerRecord.masters)
@@ -46,7 +49,7 @@ data class ModBinary(val modName: String?, val header: Record, val grups: List<G
 
         fun create(): ModBinary {
 
-            val tes4 = Record.createTes4()
+            val tes4 = RecordParser().createTes4()
             return ModBinary(null, tes4, listOf())
         }
     }

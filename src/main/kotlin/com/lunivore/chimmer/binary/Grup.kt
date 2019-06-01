@@ -38,7 +38,7 @@ data class Grup(val type: String, val headerBytes: List<Byte>, val records: List
     }
 
     constructor(loadingMod: String, type: String, headerBytes: List<Byte>, records: List<Byte>, masters: List<String>) :
-            this(type, headerBytes, Record.parseAll(loadingMod, records, masters).parsed)
+            this(type, headerBytes, RecordParser().parseAll(loadingMod, records, masters).parsed)
 
     fun render(masters: List<String>, consistencyRecorder : ConsistencyRecorder, renderer: (ByteArray) -> Unit) {
 

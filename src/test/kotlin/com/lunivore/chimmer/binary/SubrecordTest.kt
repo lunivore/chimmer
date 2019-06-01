@@ -17,7 +17,7 @@ class SubrecordTest {
         val rest = "FF EE DD CC"
 
         // When we render a subrecord from the bytes
-        val parseResult = Subrecord.parse((field + rest).fromHexStringToByteList())
+        val parseResult = Subrecord.parse(SkyrimSubrecordMenu(), (field + rest).fromHexStringToByteList())
         val subrecord = parseResult.parsed[0]
 
         // Then it should read the type from the first four digits and parse the length appropriately
@@ -35,7 +35,7 @@ class SubrecordTest {
         val field = "45 44 49 44 0A 00 49 72 6F 6E 53 72 64 00"
 
         // When we render a subrecord from the bytes
-        val parseResult = Subrecord.parse(field.fromHexStringToByteList())
+        val parseResult = Subrecord.parse(SkyrimSubrecordMenu(), field.fromHexStringToByteList())
 
         // Then the parse result should be a failure
         assertEquals(false, parseResult.succeeded)
