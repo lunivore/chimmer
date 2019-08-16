@@ -115,7 +115,7 @@ class ModBinaryTest {
                                                                            // has Skyrim as a master right now
 
         val firstNewModBinary = ModBinary.create().copy(grups = listOf(ironSwordModBinary.grups[0].copy(
-                records = listOf(ironSwordModBinary.grups[0].records[0].copyAsNew())
+                records = listOf(ironSwordModBinary.grups[0].records[0].copyAsNew("MyMod.esp", "MyNewMod_IronSword"))
         )))
 
         // Which is saved

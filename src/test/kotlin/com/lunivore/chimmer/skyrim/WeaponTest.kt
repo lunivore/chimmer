@@ -1,7 +1,7 @@
 package com.lunivore.chimmer.skyrim
 
+import com.lunivore.chimmer.ExistingFormId
 import com.lunivore.chimmer.FormId
-import com.lunivore.chimmer.binary.Record
 import com.lunivore.chimmer.binary.RecordParser
 import com.lunivore.chimmer.binary.Subrecord
 import com.lunivore.chimmer.binary.fromHexStringToByteList
@@ -17,7 +17,7 @@ class WeaponTest {
     fun `should be able to read keywords`() {
         // Given an iron sword loaded as a weapon
         val masters = listOf("Skyrim.esm", "Miscellaneous.esp")
-        val weapon = parseIronSword(masters)
+        val weapon = parseIronSword("MyMod.esp", masters)
 
         // Then it should have the relevant keywords
         val expectedKeywords = listOf(0x0001e711u, 0x0001e718u, 0x0008f958u).map { FormId.create("MyMod.esp", it, masters) }
@@ -29,7 +29,7 @@ class WeaponTest {
     fun `should be able to add (set) keywords`() {
         // Given an iron sword loaded as a weapon
         val masters = listOf("Skyrim.esm", "Miscellaneous.esp")
-        val weapon = parseIronSword(masters)
+        val weapon = parseIronSword("MyMod.esp", masters)
 
         // When we add a new keyword from another mod (note it has a loadingMod set, but its index is beyond
         // the masters so NewKeywords.esp is its master)
@@ -79,6 +79,7 @@ class WeaponTest {
     fun `should reindex CRDT formId if we have one`() {
         // Given an iron sword loaded as a weapon
         // With a CRDT record we made up with a new crit effect
+        // (The 02 index means that it will use MyMod.esp as a master)
         val masters = listOf("Skyrim.esm", "Miscellaneous.esp")
         val weapon = Weapon(RecordParser().parseAll("MyMod.esp",
                 Hex.IRON_SWORD_WEAPON.fromHexStringToByteList(),
@@ -91,6 +92,7 @@ class WeaponTest {
         val newWeapon = weapon.withKeywords(weapon.keywords.plus(newKeyword))
 
         // Then the CRDT record should have been updated too
+        // (Because it's using this mod as master, it should still have an index that's 1 greater than masterlist.)
         val expectedCrdt = "09 00 00 00 00 00 80 3F 01 FF FF FF 0A 0B 0C 03"
         assertEquals(expectedCrdt, newWeapon.record.find("CRDT")!!.bytes.toReadableHexString())
 
@@ -118,15 +120,15 @@ class WeaponTest {
                 .withFlags(Weapon.Flags.CANT_DROP)
 
         // Then the changes should be consistent
-        assertEquals(crossbow.formId.toBigEndianHexString(), newSword.template?.toBigEndianHexString())
+        assertEquals((crossbow.formId as ExistingFormId).toBigEndianHexString(), (newSword.template as ExistingFormId).toBigEndianHexString())
 
         // And we should be able to view things that would normally be read-only
         assertEquals(Weapon.WeaponType.ONE_HAND_SWORD, newSword.weaponType)
     }
 
 
-    private fun parseIronSword(masters: List<String>): Weapon {
-        return Weapon(RecordParser().parseAll("MyMod.esp",
+    private fun parseIronSword(loadingMod: String, masters: List<String>): Weapon {
+        return Weapon(RecordParser().parseAll(loadingMod,
                 Hex.IRON_SWORD_WEAPON.fromHexStringToByteList(),
                 masters).parsed[0])
     }

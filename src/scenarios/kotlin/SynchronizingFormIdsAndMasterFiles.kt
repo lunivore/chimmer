@@ -38,12 +38,12 @@ class SynchronizingFormIdsAndMasterFiles()  : ChimmerScenario() {
         val chimmer = Chimmer(fileHandler())
         var mods = chimmer.load(modDirectory, plugins,  ModsToLoad.SKIP_BETHESDA_MODS)
 
-        val sword1 = mods[0].weapons.first().copyAsNew()
         val modName1 = "IronSword1_${System.currentTimeMillis()}.esp"
+        val sword1 = mods[0].weapons.first().copyAsNew(modName1, "MyMod1_IronSword")
         val newMod1 = chimmer.createMod(modName1).withWeapons(listOf(sword1))
 
-        val sword2 = mods[0].weapons.first().copyAsNew()
         val modName2 = "IronSword2_${System.currentTimeMillis()}.esp"
+        val sword2 = mods[0].weapons.first().copyAsNew(modName2, "MyMod2_IronSword")
         val newMod2 = chimmer.createMod(modName2).withWeapons(listOf(sword2))
 
         chimmer.save(newMod1)
@@ -85,10 +85,10 @@ class SynchronizingFormIdsAndMasterFiles()  : ChimmerScenario() {
         val oldSword = mods[0].weapons.first()
         val crossbow = mods[1].weapons[1]
 
-        val keywordToAdd = mods[2].keywords.first().formId
-        val newSword = oldSword.copyAsNew().plusKeyword(keywordToAdd)
-
+        val keywordToAdd = mods[2].keywords.first().formId as ExistingFormId
         val newModName = "NewMod_${System.currentTimeMillis()}.esp"
+        val newSword = oldSword.copyAsNew(newModName, "MyMod_IronSword").plusKeyword(keywordToAdd)
+
         val newMod = chimmer.createMod(newModName).withWeapons(listOf(crossbow, newSword))
 
         chimmer.save(newMod)
@@ -103,12 +103,12 @@ class SynchronizingFormIdsAndMasterFiles()  : ChimmerScenario() {
 
         // Then the keyword should be updated to reflect the position in the new masterlist
         // (Remember we don't actually load Skyrim or Dawnguard!)
-        val expectedKeyword = FormId.create(newModName, 0x01000000u or keywordToAdd.unindexed, listOf("Skyrim.esm", "Dawnguard.esm", "MiscellaneousKeyword.esp"))
+        val expectedKeyword = FormId.create(newModName, 0x01000000u or (keywordToAdd).unindexed, listOf("Skyrim.esm", "Dawnguard.esm", "MiscellaneousKeyword.esp")) as ExistingFormId
         val reloadedSword = reloadedMods[2].weapons[1]
-        val actualKeyword = reloadedSword.keywords[3]
+        val actualKeyword = reloadedSword.keywords[3] as ExistingFormId
 
         // (This first line is just easier to read if it goes wrong)
         assertEquals(expectedKeyword.toBigEndianHexString(), actualKeyword.toBigEndianHexString())
-        assertEquals(expectedKeyword, actualKeyword)
+        assertEquals(expectedKeyword.key, actualKeyword.key)
     }
 }

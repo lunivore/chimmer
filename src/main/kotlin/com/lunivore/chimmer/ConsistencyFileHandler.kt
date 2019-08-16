@@ -3,6 +3,7 @@ package com.lunivore.chimmer
 import com.lunivore.chimmer.binary.fromHexStringToByteList
 import com.lunivore.chimmer.binary.toLittleEndianBytes
 import com.lunivore.chimmer.binary.toLittleEndianUInt
+import com.lunivore.chimmer.binary.toReadableHexString
 import java.io.File
 
 typealias ModFilename = String
@@ -47,7 +48,7 @@ class ConsistencyFileHandler(private val workingDirectory : File,
             val pairLines = file.readLines()
             val splitLines: List<Pair<String, UInt>> = pairLines.map {
                 it.split(":")
-            }.map { Pair(it[0], it[1].fromHexStringToByteList().toLittleEndianUInt() ) }
+            }.map { Pair(it[0], it[1].fromHexStringToByteList().toLittleEndianUInt() ) } // TODO: Kotlin's added radix stuff now; may be a better way
             mapForMod.putAll(splitLines)
             lastUsedId = splitLines.lastOrNull()?.second ?: 2047u
         }
@@ -61,7 +62,8 @@ class ConsistencyFileHandler(private val workingDirectory : File,
 
         val mapForMod = mapsForMods[modFilename] ?: mutableMapOf()
         mapForMod.forEach {
-            file.appendText("${it.key}:${String(it.value.toLittleEndianBytes()).subSequence(1, 3)}")
+            val unindexedFormIdAsString = it.value.toString(16).padStart(6, '0')
+            file.appendText("${it.key}:${unindexedFormIdAsString}")
             file.appendText(System.lineSeparator())
         }
     }

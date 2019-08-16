@@ -5,7 +5,7 @@ import com.lunivore.chimmer.FormId
 @UseExperimental(ExperimentalUnsignedTypes::class)
 interface RecordWrapper<T : RecordWrapper<T>> {
 
-    fun copyAsNew(): T
+    fun copyAsNew(newMaster : String, editorId : String): T
     val formId: FormId
     val record: Record
     val loadingMod: String?

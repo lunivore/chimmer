@@ -4,19 +4,68 @@ import com.lunivore.chimmer.binary.toLittleEndianBytes
 
 typealias UnindexedFormId = UInt
 
+
+
+interface FormId {
+
+    data class  Key(val master: String?, val unindexed: UnindexedFormId)
+
+    val key: Key
+    val master: String
+
+    companion object {
+
+        val TES4: FormId = Tes4HeaderFormId()
+        // Note that this is never used in mods; FF is reserved for things created in-game so is safe to use here
+        // as a temporary measure.
+        val UNINDEXED_FORM_ID_FOR_NEW_RECORD = 0xffffffffu
+
+        fun create(loadingMod: String, raw: UInt, masters: List<String>) : FormId {
+            return ExistingFormId(loadingMod, raw, masters)
+        }
+
+        fun createNew(masterOrLoadingMod: String, editorId: String): FormId {
+            return NewFormId(masterOrLoadingMod, editorId)
+        }
+    }
+
+    fun isNew(): Boolean
+    fun asDebug(): String
+    fun reindexedFor(orderedMasters: List<String>): List<Byte>
+}
+
 @ExperimentalUnsignedTypes
-data class ExistingFormId(override val loadingMod: String?, private val raw: UInt, override val masters: List<String>) : FormId {
+data class ExistingFormId(val loadingMod: String, private val raw: UInt, val masters: List<String>) : FormId {
+    override val key: FormId.Key = FormId.Key(master, unindexed)
+
+    override fun reindexedFor(newMasters: List<String>): List<Byte> {
+        // TODO: Have tried to change this as little as possible because it's well past time to check this in,
+        // but this can be massively simplified once we create the FormIdSub.
+
+        val mastersToUse = if (newMasters.contains(master)) newMasters else newMasters.plus(master)
+        val newIndex = mastersToUse.indexOf(master)
+
+        if (newIndex == -1) throw IllegalStateException("""
+            Could not find master when reindexing FormId=${toBigEndianHexString()},
+            masterlist=$masters,
+            newMasterlist=$newMasters,
+            loadingMod=$loadingMod,
+            master=$master""".trimIndent())
+
+        // TODO: Replace this throughout with one method
+        return newIndex.toUInt().shl(24).or(unindexed).toLittleEndianBytes().toList()
+    }
+
+    override fun asDebug(): String = "${this::class.simpleName} : ${toBigEndianHexString()}"
 
     companion object {
         private val I_DAYS_TO_RESPAWN_VENDOR_GMST = 0x0123C00Eu
-        val INDEX_OF_NEW_RECORD = 0xff
         val TES4_FORMID = 0u
     }
 
     init {
         val index = findIndex()
-        if (index != INDEX_OF_NEW_RECORD && index > masters.size && !isTheHorribleIDaysToRespawnVendorGMST()
-                || (index == masters.size && loadingMod == null && raw != TES4_FORMID)) {
+        if (index > masters.size && !isTheHorribleIDaysToRespawnVendorGMST()) {
             throw IllegalArgumentException("FormId ${toBigEndianHexString()} has an index too large for the masterlist: ${masters}")
         }
     }
@@ -36,109 +85,52 @@ data class ExistingFormId(override val loadingMod: String?, private val raw: UIn
     override val master
         get() = findMaster()
 
-    private fun findIndex() : Int = raw.and(0xff000000u).shr(24).toInt()
-
-    override val key
-        get() = FormId.Key(findMaster(), unindexed)
-
-    override val unindexed: UnindexedFormId
+    val unindexed: UnindexedFormId
         get() = raw and 0x00ffffffu
 
-    override val rawByteList: List<Byte>
-        get() = raw.toLittleEndianBytes().toList()
+    private fun findIndex() : Int = raw.and(0xff000000u).shr(24).toInt()
 
-    private fun findMaster(): String? {
+
+    private fun findMaster(): String {
         val index = findIndex()
-        return if (index == 0xff) null
-            else if (index < masters.size) masters[index]
-            else if (index == masters.size || isTheHorribleIDaysToRespawnVendorGMST()) loadingMod else
+        return if (index < masters.size) masters[index]
+            else if (index == masters.size || !isTheHorribleIDaysToRespawnVendorGMST()) loadingMod
+            else if (isTheHorribleIDaysToRespawnVendorGMST()) "Skyrim.esm" else
             throw IllegalStateException("This should never happen as non-new forms are checked for master on construction: FormId=${toBigEndianHexString()}")
     }
 
-    override fun isNew() = raw == FormId.UNINDEXED_FORM_ID_FOR_NEW_RECORD
+    override fun isNew() = false
 
-    override fun reindex(newMasters: List<String>): FormId {
-        if (this.isNew()) return this
-
-        if (master == null) throw IllegalStateException("This should never happen as non-new forms are checked for master on construction: FormId=${toBigEndianHexString()}")
-
-        val mastersToUse = if (newMasters.contains(master!!)) newMasters else newMasters.plus(master!!)
-        val newIndex = mastersToUse.indexOf(master!!)
-
-        if (newIndex == -1) throw IllegalStateException("""
-            Could not find master when reindexing FormId=${toBigEndianHexString()},
-            masterlist=$masters,
-            newMasterlist=$newMasters,
-            loadingMod=$loadingMod,
-            master=$master""".trimIndent())
-
-        return ExistingFormId(null, newIndex.toUInt().shl(24).or(unindexed), mastersToUse)
-    }
-
-    /**
-     * Returns the original hex string with which the form id was created, independent of its master's load order.
-     */
-    override fun toBigEndianHexString(): String = raw.toString(16).padStart(8, '0').toUpperCase()
+    fun toBigEndianHexString(): String = raw.toString(16).padStart(8, '0').toUpperCase()
 }
 
-interface FormId {
+data class NewFormId(val modName: String, val editorId : String) : FormId {
+    override val key: FormId.Key
+            get() = throw IllegalStateException("Attempt to get key for comparison or sorting of new FormId - don't merge new mods before they're saved!")
 
-    val loadingMod: String?
-    val unindexed: UnindexedFormId
-    val key: Key
-    /**
-     * Returns the master for this object, or null if the object belongs to the current mod
-     * (for which the FormId index will be 1 more than the last master).
-     * For example, if masters are "Skyrim.esm" and "Dawnguard.esm" then an index of 00 will be Skyrim,
-     * an index of 01 will be Dawnguard and an index of 02 returns no master, indicating that this mod is the
-     * master itself.
-     *
-     * Any other indexes will result in an exception.
-     */
-    val master: String?
-    val masters: List<String>
-    val rawByteList: List<Byte>
-
-    data class  Key(val master: String?, val unindexed: UnindexedFormId)
-
-
-    companion object {
-
-        val TES4: FormId = ExistingFormId(null, 0u, listOf())
-        // Note that this is never used in mods; FF is reserved for things created in-game so is safe to use here
-        // as a temporary measure.
-        val UNINDEXED_FORM_ID_FOR_NEW_RECORD = 0xffffffffu
-
-        fun createNew(masters: List<String>): FormId {
-            return ExistingFormId(null, UNINDEXED_FORM_ID_FOR_NEW_RECORD, masters)
-        }
-
-        fun create(loadingMod: String?, raw: UInt, masters: List<String>) : FormId {
-            return ExistingFormId(loadingMod, raw, masters)
-        }
+    override fun reindexedFor(orderedMasters: List<String>): List<Byte> {
+        TODO("Not implemented for new form ids - $modName - $editorId")
     }
 
-    fun isNew(): Boolean
-    /**
-     * Returns the original hex string with which the form id was created, independent of its master's load order.
-     */
-    fun toBigEndianHexString(): String
+    override fun asDebug(): String = "${this::class.simpleName} : $modName : $editorId"
 
-    fun reindex(newMasters: List<String>): FormId
-
+    override fun isNew(): Boolean = true
+    override val master: String = modName
 }
 
-@UseExperimental(ExperimentalUnsignedTypes::class)
-class FormIdKeyComparator(private val loadOrder: List<String>) : Comparator<FormId.Key>{
-    override fun compare(o1: FormId.Key?, o2: FormId.Key?): Int {
-        if(o1 == null || o2 == null) throw IllegalArgumentException("This should never happen as FormIds are never null")
+class Tes4HeaderFormId() : FormId {
 
-        val o1Index = loadOrder.indexOf(o1.master)
-        val o2Index = loadOrder.indexOf(o2.master)
+    override val key: FormId.Key
+            get() = throw IllegalStateException("Should never need the FormId of a TES4 Header record as it's always empty")
 
-        if (o1Index == -1  || o2Index == -1)
-            throw IllegalArgumentException("Error comparing FormIds; o1.master=${o1.master}, o2.master=${o2.master}, loadOrder=$loadOrder")
-
-        return if (o1Index == o2Index) o1.unindexed.compareTo(o2.unindexed) else o1Index.compareTo(o2Index)
+    override fun reindexedFor(orderedMasters: List<String>): List<Byte> {
+        return 0x00000000u.toLittleEndianBytes().toList()
     }
+
+    override fun asDebug(): String = "${this::class.simpleName}"
+
+    override fun isNew(): Boolean = throw java.lang.IllegalArgumentException("Should never need to check the FormId on a TES4Header!")
+
+    override val master: String
+        get() = throw java.lang.IllegalArgumentException("Should never need to check the FormId on a TES4Header!")
 }

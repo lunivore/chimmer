@@ -43,25 +43,24 @@ class CreatingANewMod : ChimmerScenario() {
         var mods = chimmer.load(modDirectory, plugins,  ModsToLoad.SKIP_BETHESDA_MODS)
 
         // When we create a new mod with a copy of that sword that's not an override
-        val sword = mods[0].weapons.first().copyAsNew()
         val modName = "NewIronSword_${System.currentTimeMillis()}.esp"
-        val newMod = chimmer.createMod(modName).withWeapons(listOf(sword))
+        val sword = mods[0].weapons.first().copyAsNew(modName, "MyMod_IronSword")
+        val newMod1 = chimmer.createMod(modName).withWeapons(listOf(sword))
 
-        // Then the sword should be given an appropriate ID
-        val formId = newMod.weapons.first().formId
+        // And we save the mod then reload it
+        chimmer.save(newMod1, plugins)
+        val reloadedMod1 = chimmer.load(outputFolder.root, listOf("Skyrim.esm", modName),  ModsToLoad.SKIP_BETHESDA_MODS)[0]
 
-        // When we save the mod
-        chimmer.save(newMod, plugins)
+        // And trash and recreate the sword, then save and load again
+        val newMod2 = chimmer.createMod(modName).withWeapons(listOf(sword))
+        chimmer.save(newMod2, plugins)
+        val reloadedMod2 = chimmer.load(outputFolder.root, listOf("Skyrim.esm", modName),  ModsToLoad.SKIP_BETHESDA_MODS)[0]
 
-        // Then the consistency file should have been created with the new mod name
-        assertTrue(File(outputFolder.root, "chimmer/${modName}_consistency.txt").exists())
-
-        // When we reload the mod again
-        mods = Chimmer(fileHandler()).load(outputFolder.root, listOf("Skyrim.esm", modName),  ModsToLoad.SKIP_BETHESDA_MODS)
 
         // Then the sword should have the same ID
-        val reloadedSwordId = newMod.weapons.first().formId
-        assertEquals(formId.toBigEndianHexString(), reloadedSwordId.toBigEndianHexString())
+        val reloadedSwordId1 = reloadedMod1.weapons.first().formId
+        val reloadedSwordId2 = reloadedMod2.weapons.first().formId
+        assertEquals((reloadedSwordId1 as ExistingFormId).toBigEndianHexString(), (reloadedSwordId2 as ExistingFormId).toBigEndianHexString())
     }
 
 }

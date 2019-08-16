@@ -96,8 +96,8 @@ class ConsistencyFileHandlerTest {
         val newFile = File(outputFolder.root, modName)
         assertTrue(newFile.exists())
 
-        // And it should have recorded the rawFormId (which will be 2048 as above)
-        val expected = "MY_MOD_NewId_7890ab:" + String(2048.toLittleEndianBytes()).subSequence(1, 3)
+        // And it should have recorded the rawFormId (which will be 2048 or 0x800 as above)
+        val expected = "MY_MOD_NewId_7890ab:000800"
         val actual = newFile.readLines()[0]
         assertEquals(expected, actual)
     }

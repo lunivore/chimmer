@@ -1,6 +1,7 @@
 package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.ConsistencyRecorder
+import com.lunivore.chimmer.ExistingFormId
 import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.testheplers.Hex
 import com.lunivore.chimmer.testheplers.fakeConsistencyRecorder
@@ -116,11 +117,10 @@ class RecordParserTest {
         val record = RecordParser(menu).parseAll("Wibble.esp", hex.fromHexStringToByteList(), listOf("Skyrim.esm")).parsed[0]
 
         // When we copy the record as new
-        val newRecord = record.with(Subrecord.create("EDID", "MY_MOD_Editor_Id_123456\u0000".toByteList())).copyAsNew()
+        val newRecord = record.with(Subrecord.create("EDID", "MY_MOD_Editor_Id_123456\u0000".toByteList())).copyAsNew("MyMod.esp", "MyMod_IronSword")
 
         // Then the raw should show that it's new
         Assert.assertTrue(newRecord.isNew())
-        Assert.assertEquals("FFFFFFFF", newRecord.formId.toBigEndianHexString())
 
         // But it should still have the original masters
         Assert.assertEquals(listOf("Skyrim.esm"), newRecord.masters)
@@ -135,7 +135,7 @@ class RecordParserTest {
                 listOf("Skyrim.esm", "Dawnguard.esm")).parsed[0]
 
         // Then the form Id should be the newRecord but with an index of 02
-        Assert.assertEquals("02CDAB00", parsedRecord.formId.toBigEndianHexString())
+        Assert.assertEquals("02CDAB00", (parsedRecord.formId as ExistingFormId).toBigEndianHexString())
     }
 
     @Test
@@ -182,7 +182,7 @@ class RecordParserTest {
         val renderedHex = byteArray.toByteArray()
 
         val newRecord = RecordParser(menu).parseAll("Wibble.esp", renderedHex.toList(), listOf("Skyrim.esm")).parsed[0]
-        Assert.assertEquals(FormId.create("Wibble.esp", 0x01000000u or record.formId.unindexed, listOf("Skyrim.esm")),
+        Assert.assertEquals(FormId.create("Wibble.esp", 0x01000000u or (record.formId as ExistingFormId).unindexed, listOf("Skyrim.esm")),
                 newRecord.formId)
     }
 

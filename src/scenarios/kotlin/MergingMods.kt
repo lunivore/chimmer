@@ -22,7 +22,7 @@ class MergingMods : ChimmerScenario() {
         assertEquals(2, newMod.armors.count())
 
         // And the last-loaded iron sword should be the "winner"
-        assertEquals("IronSword.esp", newMod.weapons.first {it.editorId == "IronSword"}.formId.loadingMod)
+        assertEquals("IronSword.esp", (newMod.weapons.first {it.editorId == "IronSword"}.formId as ExistingFormId).loadingMod)
     }
 }
 

@@ -1,8 +1,8 @@
 package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.ConsistencyRecorder
+import com.lunivore.chimmer.ExistingFormId
 import com.lunivore.chimmer.FormId
-import com.lunivore.chimmer.Logging
 import javax.xml.bind.DatatypeConverter
 
 /**
@@ -50,7 +50,7 @@ data class Record private constructor(val type: String, val flags: UInt, val for
         get() {
             if (lazySubrecords == null) {
                 val result = Subrecord.parse(menu, recordBytes!!)
-                if (result.failed) throw IllegalStateException(createErrorMessage(type, recordBytes!!, formId.loadingMod))
+                if (result.failed) throw IllegalStateException(createErrorMessage(type, recordBytes!!, formId.master))
 
                 lazySubrecords = result.parsed
             }
@@ -110,7 +110,7 @@ data class Record private constructor(val type: String, val flags: UInt, val for
 
     private fun getFormIdToRender(consistencyRecorder: ConsistencyRecorder, newMasters: List<String>): UInt {
         return if (formId.isNew()) { getConsistentFormIdOrCreateOne(consistencyRecorder, newMasters) }
-        else reindexForNewMasters(newMasters)
+        else reindexExistingFormIdForNewMasters(newMasters)
     }
 
     private fun getConsistentFormIdOrCreateOne(consistencyRecorder: ConsistencyRecorder, newMasters: List<String>): UInt {
@@ -123,25 +123,27 @@ data class Record private constructor(val type: String, val flags: UInt, val for
         return indexedFormId
     }
 
-    private fun reindexForNewMasters(newMasters: List<String>): UInt {
+    private fun reindexExistingFormIdForNewMasters(newMasters: List<String>): UInt {
+        // TODO: Remove this once the FormId is inside a FormIdSub
+        val existingFormId = formId as ExistingFormId
 
         // Note that we can't currently reindex all internal formIds, so if this hasn't been converted to
         // subrecords (because we know how to convert it), and the masters have changed, that's a VERY BAD THING.
         // It's fine if the original masters are still at the start of the new master list though.
         if (lazySubrecords == null && (
                         newMasters.size < masters.size || newMasters.subList(0, masters.size) != masters)) {
-            val modToUse = formId.loadingMod ?: "new mod"
+            val modToUse = formId.master
             throw IllegalStateException("Attempted to reindex unworked record $type with formId ${formId.toBigEndianHexString()} from mod $modToUse; old masters was $masters, new masters are $newMasters")
         }
 
         val master = formId.master
         val newMasterIndex = if (master == null) newMasters.size else newMasters.indexOf(master)
         if (newMasterIndex == -1) { throw IllegalArgumentException("The master $master was not found in the masterlist $newMasters.") }
-        return (newMasterIndex.toUInt() shl 24) + formId.unindexed
+        return (newMasterIndex.toUInt() shl 24) + existingFormId.unindexed
     }
 
-    fun copyAsNew(): Record {
-        return copy(formId = FormId.createNew(masters))
+    fun copyAsNew(newMaster : String, editorId: String): Record {
+        return copy(formId = FormId.createNew(newMaster, editorId))
 
     }
 

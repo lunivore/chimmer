@@ -2,8 +2,8 @@ package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.ConsistencyRecorder
 import com.lunivore.chimmer.FormId
-import com.lunivore.chimmer.FormIdKeyComparator
 import com.lunivore.chimmer.binary.ModBinary.Companion.GRUP_ORDER
+import com.lunivore.chimmer.helpers.FormIdComparator
 
 
 // TODO: Recalculate next available object id (highest + 1024), number of records and groups, and the masterlist.
@@ -124,7 +124,7 @@ fun List<ModBinary>.merge(loadOrder: List<String>): ModBinary {
                     try {
                         mapOfRecordsByFormIdKey.putIfAbsent(it.formId.key, it)
                     } catch (e: Exception) {
-                        throw Exception("Error merging record=${it.formId.toBigEndianHexString()} with EDID=${it.find("EDID")?.asString()}", e)
+                        throw Exception("Error merging record=${it.formId.asDebug()} with EDID=${it.find("EDID")?.asString()}", e)
                     }
                 }
                 mapOfRecordsByFormIdKey
@@ -133,7 +133,7 @@ fun List<ModBinary>.merge(loadOrder: List<String>): ModBinary {
 
         // For each grup name, order the records by FormId then make a new grup with all the records in it,
         // and a mod with the new grups.
-        val comparator = FormIdKeyComparator(loadOrder)
+        val comparator = FormIdComparator(loadOrder)
         val newGrups = grupOrderedMapsOfLastRecordsWithFormIdKey.mapIndexed { i, mappy ->
             if (grupsByNameFromEachMod[i].isEmpty()) null else
                 grupsByNameFromEachMod[i].first().copy(records = mappy.keys

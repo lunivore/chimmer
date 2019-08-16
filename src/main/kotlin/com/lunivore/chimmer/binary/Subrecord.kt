@@ -42,7 +42,7 @@ interface Subrecord {
 
     fun asString(): String
     fun asFloat(): Float
-    fun asFormId(loadingMod: String?, masters: List<String>): FormId?
+    fun asFormId(loadingMod: String, masters: List<String>): FormId?
 }
 
 data class ByteSub private constructor(override val type: String, override val bytes: List<Byte>) : Subrecord{
@@ -66,7 +66,7 @@ data class ByteSub private constructor(override val type: String, override val b
         return bytes.subList(0, 4).toLittleEndianFloat()
     }
 
-    override fun asFormId(loadingMod: String?, masters: List<String>): FormId? {
+    override fun asFormId(loadingMod: String, masters: List<String>): FormId? {
         return FormId.create(loadingMod, bytes.toLittleEndianUInt(), masters)
     }
 

@@ -116,6 +116,6 @@ class LoadingAndSavingMods  : ChimmerScenario() {
         var mods = chimmer.load(modDirectory, plugins,  ModsToLoad.SKIP_BETHESDA_MODS)
 
         // Then we should be able to see those records too
-        assertEquals("00000EB4", mods[0].npcs[0].formId.toBigEndianHexString())
+        assertEquals("00000EB4", (mods[0].npcs[0].formId as ExistingFormId).toBigEndianHexString())
     }
 }
