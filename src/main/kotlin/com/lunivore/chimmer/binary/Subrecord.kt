@@ -12,7 +12,7 @@ interface Subrecord {
         @JvmStatic
         val logger = LogManager.getLogger(Subrecord::class.java)
 
-        fun parse(menu: SubrecordMenu, bytes: List<Byte>): ParseResult<List<Subrecord>> {
+        fun parse(menu: SubrecordMenu, recordType: String, bytes: List<Byte>): ParseResult<List<Subrecord>> {
             var rest = bytes
             val subrecords = mutableListOf<Subrecord>()
 
@@ -28,14 +28,12 @@ interface Subrecord {
 
                 if (rest.size < 6 + length) return ParseResult(listOf(), listOf(), "Failed to parse subrecord of type $type") // TODO Ditto
 
-                subrecords.add(ByteSub.create(type, rest.subList(6, 6 + length)))
+                subrecords.add(menu.findProvider(recordType, type)(rest.subList(6, 6 + length)))
                 rest = if (rest.size <= 6 + length) listOf() else rest.subList(6 + length, rest.size)
             }
 
             return ParseResult(subrecords, rest)
         }
-
-        fun create(type: String, bytes: List<Byte>) : Subrecord = ByteSub.create(type, bytes)
     }
 
     fun renderTo(renderer: (ByteArray) -> Unit)

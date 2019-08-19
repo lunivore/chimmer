@@ -15,7 +15,7 @@ class RecordParser(val menu : SubrecordMenu = SkyrimSubrecordMenu()) {
     fun parseTes4(modName: String, bytes: List<Byte>): ParseResult<Record> {
         val (headerBytes, recordBytes, rest) = parseDataForType(modName, "TES4", bytes, listOf())
 
-        val subrecordsResult = Subrecord.parse(menu, recordBytes)
+        val subrecordsResult = Subrecord.parse(menu, "TES4", recordBytes)
         if (subrecordsResult.failed) throw IllegalStateException(createErrorMessage("TES4", bytes, modName))
 
         val masters = findMastersForTes4HeaderRecordOnly(subrecordsResult.parsed)
@@ -95,12 +95,12 @@ class RecordParser(val menu : SubrecordMenu = SkyrimSubrecordMenu()) {
     fun createTes4(): Record {
 
         val tes4subrecords = listOf(
-                Subrecord.create("HEDR", listOf(
-                        1.7f.toLittleEndianBytes().toList(),
-                        0.toLittleEndianBytes().toList(),
-                        1024.toLittleEndianBytes().toList()).flatten()),
-                Subrecord.create("CNAM", "Chimmer\u0000".toByteArray().toList()),
-                Subrecord.create("SNAM", "\u0000".toByteArray().toList()))
+                ByteSub.create("HEDR", listOf(
+                                1.7f.toLittleEndianBytes().toList(),
+                                0.toLittleEndianBytes().toList(),
+                                1024.toLittleEndianBytes().toList()).flatten()),
+                ByteSub.create("CNAM", "Chimmer\u0000".toByteArray().toList()),
+                ByteSub.create("SNAM", "\u0000".toByteArray().toList()))
         return Record.createNew("TES4", 0u, FormId.TES4, OLDRIM_VERSION, tes4subrecords, listOf(), menu)
     }
 }

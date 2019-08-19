@@ -2,8 +2,8 @@ package com.lunivore.chimmer.skyrim
 
 import com.lunivore.chimmer.ExistingFormId
 import com.lunivore.chimmer.FormId
+import com.lunivore.chimmer.binary.ByteSub
 import com.lunivore.chimmer.binary.RecordParser
-import com.lunivore.chimmer.binary.Subrecord
 import com.lunivore.chimmer.binary.fromHexStringToByteList
 import com.lunivore.chimmer.testheplers.Hex
 import com.lunivore.chimmer.testheplers.toReadableHexString
@@ -47,8 +47,8 @@ class WeaponTest {
         val actualKSIZ = newWeapon.record.find("KSIZ")
         val actualKWDA = newWeapon.record.find("KWDA")
 
-        val expectedKSIZ = Subrecord.create("KSIZ", "04 00 00 00".fromHexStringToByteList())
-        val expectedKWDA = Subrecord.create("KWDA", "11 e7 01 00 18 e7 01 00 58 f9 08 00 0c 0b 0a 02".fromHexStringToByteList())
+        val expectedKSIZ = ByteSub.create("KSIZ", "04 00 00 00".fromHexStringToByteList())
+        val expectedKWDA = ByteSub.create("KWDA", "11 e7 01 00 18 e7 01 00 58 f9 08 00 0c 0b 0a 02".fromHexStringToByteList())
 
         assertEquals(expectedKSIZ, actualKSIZ)
         assertEquals(expectedKWDA, actualKWDA)
@@ -65,7 +65,7 @@ class WeaponTest {
         val weapon = Weapon(RecordParser().parseAll("MyMod.esp",
                 Hex.IRON_SWORD_WEAPON.fromHexStringToByteList(),
                 masters).parsed[0]
-                .with(Subrecord.create("ETYP", "0C 0B 0A 02".fromHexStringToByteList())))
+                .with(ByteSub.create("ETYP", "0C 0B 0A 02".fromHexStringToByteList())))
 
         // When we add a new keyword (which requires a new master)
         val newKeyword = FormId.create("NewKeywords.esp", 0x010a0b0cu, listOf("Skyrim.esm"))
@@ -84,7 +84,7 @@ class WeaponTest {
         val weapon = Weapon(RecordParser().parseAll("MyMod.esp",
                 Hex.IRON_SWORD_WEAPON.fromHexStringToByteList(),
                 masters).parsed[0]
-                .with(Subrecord.create("CRDT", "09 00 00 00 00 00 80 3F 01 FF FF FF 0A 0B 0C 02".fromHexStringToByteList())))
+                .with(ByteSub.create("CRDT", "09 00 00 00 00 00 80 3F 01 FF FF FF 0A 0B 0C 02".fromHexStringToByteList())))
 
 
         // When we add a keyword to force remastering

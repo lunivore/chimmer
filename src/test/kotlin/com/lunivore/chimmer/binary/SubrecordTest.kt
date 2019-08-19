@@ -17,7 +17,7 @@ class SubrecordTest {
         val rest = "FF EE DD CC"
 
         // When we render a subrecord from the bytes
-        val parseResult = Subrecord.parse(SkyrimSubrecordMenu(), (field + rest).fromHexStringToByteList())
+        val parseResult = Subrecord.parse(SkyrimSubrecordMenu(), "WEAP", (field + rest).fromHexStringToByteList())
         val subrecord = parseResult.parsed[0]
 
         // Then it should read the type from the first four digits and parse the length appropriately
@@ -35,16 +35,18 @@ class SubrecordTest {
         val field = "45 44 49 44 0A 00 49 72 6F 6E 53 72 64 00"
 
         // When we render a subrecord from the bytes
-        val parseResult = Subrecord.parse(SkyrimSubrecordMenu(), field.fromHexStringToByteList())
+        val parseResult = Subrecord.parse(SkyrimSubrecordMenu(), "WEAP", field.fromHexStringToByteList())
 
         // Then the parse result should be a failure
         assertEquals(false, parseResult.succeeded)
     }
+}
 
+class ByteSubTest {
     @Test
     fun `should be able to turn contents into a string`() {
         // Given a CNAM record with content "Chimmer"
-        val cnam = Subrecord.create("CNAM", "43 68 69 6D 6D 65 72 00".fromHexStringToByteList())
+        val cnam = ByteSub.create("CNAM", "43 68 69 6D 6D 65 72 00".fromHexStringToByteList())
 
         // When we ask for it as a string
         val text = cnam.asString()

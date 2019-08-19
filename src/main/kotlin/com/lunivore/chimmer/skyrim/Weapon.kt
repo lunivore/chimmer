@@ -60,37 +60,37 @@ data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
         val orderedMasters = includeNewMasters(keywords)
 
         return create(reindex(orderedMasters, "KWDA")
-                .with(Subrecord.create("KSIZ", keywords.size.toLittleEndianBytes().toList()))
-                .with(Subrecord.create("KWDA", keywords.fold(listOf()) { r, t -> r + t.reindexedFor(orderedMasters)})))
+                .with(ByteSub.create("KSIZ", keywords.size.toLittleEndianBytes().toList()))
+                .with(ByteSub.create("KWDA", keywords.fold(listOf()) { r, t -> r + t.reindexedFor(orderedMasters)})))
     }
 
     fun withTemplate(newTemplate: FormId): Weapon {
         val orderedMasters = includeNewMasters(listOf(newTemplate))
-        return create(reindex(orderedMasters,"CNAM").with(Subrecord.create("CNAM", (newTemplate as ExistingFormId).reindexedFor(orderedMasters))))
+        return create(reindex(orderedMasters,"CNAM").with(ByteSub.create("CNAM", (newTemplate as ExistingFormId).reindexedFor(orderedMasters))))
     }
 
     fun withDamage(damage: UShort): Weapon {
         val data = record.find("DATA")?.bytes ?: throw IllegalStateException("No DATA found in weapon ${formId.asDebug()}")
         val newData = data.subList(0, 0x08).plus(damage.toLittleEndianBytes().toList())
-        return create(record.with(Subrecord.create("DATA", newData)))
+        return create(record.with(ByteSub.create("DATA", newData)))
     }
 
     fun withReach(reach: Float): Weapon {
         val dnam = record.find("DNAM")?.bytes ?: throw IllegalStateException("No DNAM found in weapon ${formId.asDebug()}")
         val newDnam = dnam.subList(0, 0x08).plus(reach.toLittleEndianBytes().toList()).plus(dnam.subList(0x0C, dnam.size))
-        return create(record.with(Subrecord.create("DNAM", newDnam)))
+        return create(record.with(ByteSub.create("DNAM", newDnam)))
     }
 
     fun withSpeed(speed: Float): Weapon {
         val dnam = record.find("DNAM")?.bytes ?: throw IllegalStateException("No DNAM found in weapon ${formId.asDebug()}")
         val newDnam = dnam.subList(0, 0x04).plus(speed.toLittleEndianBytes().toList()).plus(dnam.subList(0x08, dnam.size))
-        return create(record.with(Subrecord.create("DNAM", newDnam)))
+        return create(record.with(ByteSub.create("DNAM", newDnam)))
     }
 
     fun withFlags(flags: UShort): Weapon {
         val dnam = record.find("DNAM")?.bytes ?: throw IllegalStateException("No DNAM found in weapon ${formId.asDebug()}")
         val newDnam = dnam.subList(0, 0x0E).plus(flags.toLittleEndianBytes().toList()).plus(dnam.subList(0x10, dnam.size))
-        return create(record.with(Subrecord.create("DNAM", newDnam)))
+        return create(record.with(ByteSub.create("DNAM", newDnam)))
     }
 
     private fun includeNewMasters(newFormIds: List<FormId>): List<String> {
@@ -115,7 +115,7 @@ data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
 
         val reindexedSubs = subrecordsToReindex.map { record.find(it) }.filterNotNull()
                 .map { Pair(it, FormId.create(loadingMod, it.bytes.toLittleEndianUInt(), record.masters).reindexedFor(newMasters)) }
-                .map { Subrecord.create(it.first.type, it.second)}
+                .map { ByteSub.create(it.first.type, it.second) }
                 .plus(reindexCRDT(newMasters))
 
         return reindexedSubs.fold(record) {r, s -> r.with(s) }.copy(masters = newMasters)
@@ -125,7 +125,7 @@ data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
         val crdt = record.find("CRDT") ?: return listOf()
         val spellEffect = FormId.create(loadingMod, crdt.bytes.subList(12, 16).toLittleEndianUInt(), record.masters)
         val reindexedSpellEffect = spellEffect.reindexedFor(newMasters)
-        return listOf(Subrecord.create("CRDT", crdt.bytes.subList(0, 12).plus(reindexedSpellEffect)))
+        return listOf(ByteSub.create("CRDT", crdt.bytes.subList(0, 12).plus(reindexedSpellEffect)))
     }
 
 

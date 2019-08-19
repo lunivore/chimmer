@@ -60,7 +60,7 @@ data class Record private constructor(val type: String, val flags: UInt, val for
     val subrecords : List<Subrecord>
         get() {
             if (lazySubrecords == null) {
-                val result = Subrecord.parse(menu, recordBytes!!)
+                val result = Subrecord.parse(menu, type, recordBytes!!)
                 if (result.failed) throw IllegalStateException(createMalformedErrorMessage(type, recordBytes!!, formId.master))
 
                 lazySubrecords = result.parsed
@@ -112,7 +112,7 @@ data class Record private constructor(val type: String, val flags: UInt, val for
 
     private fun tes4SubrecordsWithMastDataPairs(newMasters: List<String>): List<Subrecord> {
         val masterRecords = newMasters.flatMap {
-            listOf( Subrecord.create("MAST", "$it\u0000".toByteList()), Subrecord.create("DATA", listOf())) }
+            listOf(ByteSub.create("MAST", "$it\u0000".toByteList()), ByteSub.create("DATA", listOf())) }
         val subrecordsToRender : List<Subrecord> = (listOf("HEDR", "CNAM", "SNAM").map { find(it)} +
                 masterRecords + listOf("ONAM", "INTV", "INCC").map { find(it)}).filterNotNull()
         return subrecordsToRender
