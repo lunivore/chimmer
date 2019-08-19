@@ -3,7 +3,6 @@ package com.lunivore.chimmer
 import com.lunivore.chimmer.testheplers.asResourceFile
 import org.junit.Assert
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 

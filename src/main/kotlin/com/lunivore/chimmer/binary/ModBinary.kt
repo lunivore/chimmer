@@ -61,7 +61,7 @@ data class ModBinary(val modName: String?, val header: Record, val grups: List<G
 //            val mastersOfRecords = grups.flatMap { it.records.flatMap { it.masters.plus(it.formId.master) } }
 //            val originsWhereNoMasters = grups.flatMap {
 //                it.records.flatMap {
-//                    if (it.formId.master == null) listOf(it.formId.loadingMod) else listOf<String>()
+//                    if (it.formId.master == null) listOf(it.formId.originMod) else listOf<String>()
 //                }
 //            }
 //            val mastersToUse = (mastersOfRecords + originsWhereNoMasters).filterNot { it.isNullOrEmpty() }.map { it!! }.toSet()

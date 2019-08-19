@@ -24,8 +24,8 @@ interface FormId {
             return ExistingFormId(loadingMod, raw, masters)
         }
 
-        fun createNew(masterOrLoadingMod: String, editorId: String): FormId {
-            return NewFormId(masterOrLoadingMod, editorId)
+        fun createNew(originMod: String, editorId: String): FormId {
+            return NewFormId(originMod, editorId)
         }
     }
 
@@ -35,7 +35,7 @@ interface FormId {
 }
 
 @ExperimentalUnsignedTypes
-data class ExistingFormId(val loadingMod: String, private val raw: UInt, val masters: List<String>) : FormId {
+data class ExistingFormId(val originMod: String, private val raw: UInt, val masters: List<String>) : FormId {
     override val key: FormId.Key = FormId.Key(master, unindexed)
 
     override fun reindexedFor(newMasters: List<String>): List<Byte> {
@@ -49,7 +49,7 @@ data class ExistingFormId(val loadingMod: String, private val raw: UInt, val mas
             Could not find master when reindexing FormId=${toBigEndianHexString()},
             masterlist=$masters,
             newMasterlist=$newMasters,
-            loadingMod=$loadingMod,
+            originMod=$originMod,
             master=$master""".trimIndent())
 
         // TODO: Replace this throughout with one method
@@ -66,24 +66,21 @@ data class ExistingFormId(val loadingMod: String, private val raw: UInt, val mas
     init {
         val index = findIndex()
         if (index > masters.size && !isTheHorribleIDaysToRespawnVendorGMST()) {
-            throw IllegalArgumentException("FormId ${toBigEndianHexString()} has an index too large for the masterlist: ${masters}")
+            throw IllegalArgumentException("FormId ${toBigEndianHexString()} from mod ${originMod} has an index too large for the masterlist: ${masters}")
         }
     }
 
     private fun isTheHorribleIDaysToRespawnVendorGMST() =
-            raw == I_DAYS_TO_RESPAWN_VENDOR_GMST && loadingMod == "Skyrim.esm"
+            raw == I_DAYS_TO_RESPAWN_VENDOR_GMST && originMod == "Skyrim.esm"
 
-    /**
-     * Returns the master for this object, or null if the object belongs to the current mod
-     * (for which the FormId index will be 1 more than the last master).
-     * For example, if masters are "Skyrim.esm" and "Dawnguard.esm" then an index of 00 will be Skyrim,
-     * an index of 01 will be Dawnguard and an index of 02 returns no master, indicating that this mod is the
-     * master itself.
-     *
-     * Any other indexes will result in an exception.
-     */
-    override val master
-        get() = findMaster()
+    override val master: String
+        get() {
+            val index = findIndex()
+            return if (index < masters.size) masters[index]
+                    else if (index == masters.size || !isTheHorribleIDaysToRespawnVendorGMST()) originMod
+                    else if (isTheHorribleIDaysToRespawnVendorGMST()) "Skyrim.esm" else
+                    throw IllegalStateException("This should never happen as non-new forms are checked for master on construction: FormId=${toBigEndianHexString()}")
+        }
 
     val unindexed: UnindexedFormId
         get() = raw and 0x00ffffffu
@@ -91,31 +88,23 @@ data class ExistingFormId(val loadingMod: String, private val raw: UInt, val mas
     private fun findIndex() : Int = raw.and(0xff000000u).shr(24).toInt()
 
 
-    private fun findMaster(): String {
-        val index = findIndex()
-        return if (index < masters.size) masters[index]
-            else if (index == masters.size || !isTheHorribleIDaysToRespawnVendorGMST()) loadingMod
-            else if (isTheHorribleIDaysToRespawnVendorGMST()) "Skyrim.esm" else
-            throw IllegalStateException("This should never happen as non-new forms are checked for master on construction: FormId=${toBigEndianHexString()}")
-    }
-
     override fun isNew() = false
 
     fun toBigEndianHexString(): String = raw.toString(16).padStart(8, '0').toUpperCase()
 }
 
-data class NewFormId(val modName: String, val editorId : String) : FormId {
+data class NewFormId(val originatingMod: String, val editorId : String) : FormId {
     override val key: FormId.Key
             get() = throw IllegalStateException("Attempt to get key for comparison or sorting of new FormId - don't merge new mods before they're saved!")
 
     override fun reindexedFor(orderedMasters: List<String>): List<Byte> {
-        TODO("Not implemented for new form ids - $modName - $editorId")
+        TODO("Not implemented for new form ids - $originatingMod - $editorId")
     }
 
-    override fun asDebug(): String = "${this::class.simpleName} : $modName : $editorId"
+    override fun asDebug(): String = "${this::class.simpleName} : $originatingMod : $editorId"
 
     override fun isNew(): Boolean = true
-    override val master: String = modName
+    override val master: String = originatingMod
 }
 
 class Tes4HeaderFormId() : FormId {
@@ -129,8 +118,8 @@ class Tes4HeaderFormId() : FormId {
 
     override fun asDebug(): String = "${this::class.simpleName}"
 
-    override fun isNew(): Boolean = throw java.lang.IllegalArgumentException("Should never need to check the FormId on a TES4Header!")
+    override fun isNew(): Boolean = throw IllegalArgumentException("Should never need to check the FormId on a TES4Header!")
 
     override val master: String
-        get() = throw java.lang.IllegalArgumentException("Should never need to check the FormId on a TES4Header!")
+        get() = throw IllegalArgumentException("Should never need to check the FormId on a TES4Header!")
 }

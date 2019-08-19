@@ -1,9 +1,7 @@
 package com.lunivore.chimmer
 
 import com.lunivore.chimmer.binary.fromHexStringToByteList
-import com.lunivore.chimmer.binary.toLittleEndianBytes
 import com.lunivore.chimmer.binary.toLittleEndianUInt
-import com.lunivore.chimmer.binary.toReadableHexString
 import java.io.File
 
 typealias ModFilename = String

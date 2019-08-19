@@ -1,6 +1,5 @@
 package com.lunivore.chimmer.binary
 
-import com.lunivore.chimmer.ConsistencyRecorder
 import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.Logging
 import javax.xml.bind.DatatypeConverter
@@ -21,7 +20,7 @@ class RecordParser(val menu : SubrecordMenu = SkyrimSubrecordMenu()) {
 
         val masters = findMastersForTes4HeaderRecordOnly(subrecordsResult.parsed)
 
-        return ParseResult(Record(modName, headerBytes, null, subrecordsResult.parsed, masters, menu), rest)
+        return ParseResult(Record.createWithSubrecords(modName, headerBytes, subrecordsResult.parsed, masters, menu), rest)
     }
 
     fun parseAll(modName: String, bytes: List<Byte>, masters: List<String>): ParseResult<List<Record>> {
@@ -36,7 +35,7 @@ class RecordParser(val menu : SubrecordMenu = SkyrimSubrecordMenu()) {
 
             val (headerBytes, recordBytes, newRest) = parseDataForType(modName, type, rest, masters)
             rest = newRest
-            val record = Record(modName, headerBytes, recordBytes, null, masters, menu)
+            val record = Record.createWithBytes(modName, headerBytes, recordBytes, masters, menu)
             records.add(record)
         }
         return ParseResult(records, rest)
@@ -102,6 +101,6 @@ class RecordParser(val menu : SubrecordMenu = SkyrimSubrecordMenu()) {
                         1024.toLittleEndianBytes().toList()).flatten()),
                 Subrecord.create("CNAM", "Chimmer\u0000".toByteArray().toList()),
                 Subrecord.create("SNAM", "\u0000".toByteArray().toList()))
-        return Record.create("TES4", 0u, FormId.TES4, OLDRIM_VERSION, null, tes4subrecords, listOf(), menu)
+        return Record.createNew("TES4", 0u, FormId.TES4, OLDRIM_VERSION, tes4subrecords, listOf(), menu)
     }
 }

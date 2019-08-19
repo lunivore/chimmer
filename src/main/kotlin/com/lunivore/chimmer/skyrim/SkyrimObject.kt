@@ -18,6 +18,6 @@ abstract class SkyrimObject<T : RecordWrapper<T>>(override val record: Record) :
         get() = record.formId
 
     override val loadingMod: String
-        get() = if (record.isNew()) (record.formId as NewFormId).modName
-                else (record.formId as ExistingFormId).loadingMod
+        get() = if (record.isNew()) (record.formId as NewFormId).originatingMod
+                else (record.formId as ExistingFormId).originMod
 }

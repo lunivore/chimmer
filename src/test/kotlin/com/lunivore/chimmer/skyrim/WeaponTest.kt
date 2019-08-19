@@ -31,7 +31,7 @@ class WeaponTest {
         val masters = listOf("Skyrim.esm", "Miscellaneous.esp")
         val weapon = parseIronSword("MyMod.esp", masters)
 
-        // When we add a new keyword from another mod (note it has a loadingMod set, but its index is beyond
+        // When we add a new keyword from another mod (note it has a originMod set, but its index is beyond
         // the masters so NewKeywords.esp is its master)
         val newKeyword = FormId.create("NewKeywords.esp", 0x010a0b0cu, listOf("Skyrim.esm"))
         val newWeapon = weapon.withKeywords(weapon.keywords.plus(newKeyword))

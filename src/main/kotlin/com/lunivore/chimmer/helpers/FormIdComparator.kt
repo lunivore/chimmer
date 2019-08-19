@@ -1,8 +1,6 @@
 package com.lunivore.chimmer.helpers
 
-import com.lunivore.chimmer.ExistingFormId
 import com.lunivore.chimmer.FormId
-import com.lunivore.chimmer.NewFormId
 
 
 @UseExperimental(ExperimentalUnsignedTypes::class)
