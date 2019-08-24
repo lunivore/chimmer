@@ -1,6 +1,7 @@
 package com.lunivore.chimmer
 
 import com.lunivore.chimmer.binary.ModBinary
+import com.lunivore.chimmer.helpers.OriginMod
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileNotFoundException
@@ -19,7 +20,7 @@ class Chimmer(val configuration : FileHandler = SensibleDefaultFileHandler()) {
         val logger by Logging()
     }
 
-    private var lastSeenLoadOrder: List<ModFilename> = listOf()
+    private var lastSeenLoadOrder: List<String> = listOf()
 
 
 
@@ -39,7 +40,7 @@ class Chimmer(val configuration : FileHandler = SensibleDefaultFileHandler()) {
         return load(modFolder, loadOrderFile.readLines())
     }
 
-    fun load(modFolder: File, loadOrder: List<ModFilename>, modsToLoad: ModsToLoad = ModsToLoad.LOAD_ALL): List<Mod> {
+    fun load(modFolder: File, loadOrder: List<String>, modsToLoad: ModsToLoad = ModsToLoad.LOAD_ALL): List<Mod> {
         lastSeenLoadOrder = loadOrder
         if (!modFolder.exists()) {
             throw FileNotFoundException("Could not find mod folder '${modFolder.absolutePath}'")
@@ -53,16 +54,17 @@ class Chimmer(val configuration : FileHandler = SensibleDefaultFileHandler()) {
                 throw FileNotFoundException("Could not find '$it' in folder '${modFolder.absolutePath}'")
             }
             logger.info("Loading mod $it")
-            Mod(it, ModBinary.parse(it, matchingFiles[0].readBytes()))
+            val modBinary = ModBinary.parse(OriginMod(it), matchingFiles[0].readBytes())
+            Mod(it, modBinary)
         }
     }
 
     /**
-     * If no load order is provided for the master files, Chimmer will use whatever it last saw. All masters will be
+     * If no load order is provided for the master files, Chimmer will use whatever it last saw. All value will be
      * saved regardless, with any new master files appended to the load order provided.
      */
-    fun save(mod: Mod, loadOrderForMasters: List<ModFilename> = lastSeenLoadOrder) {
-
+    fun save(mod: Mod, loadOrderForMasters: List<String> = lastSeenLoadOrder) {
+        logger.info("Saving mod ${mod.name} with value ${mod.masters} and load order $lastSeenLoadOrder")
         val accessor = configuration.recorderFor(mod.name)
 
         val newFile = File(configuration.outputFolder, mod.name)
@@ -76,7 +78,7 @@ class Chimmer(val configuration : FileHandler = SensibleDefaultFileHandler()) {
     }
 
     fun createMod(modName: String): Mod {
-        return Mod(modName, ModBinary.create())
+        return Mod(modName, ModBinary.create(modName))
 
     }
 

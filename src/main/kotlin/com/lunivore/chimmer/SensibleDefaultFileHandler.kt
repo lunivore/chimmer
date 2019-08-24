@@ -1,5 +1,6 @@
 package com.lunivore.chimmer
 
+import com.lunivore.chimmer.helpers.OriginMod
 import java.io.File
 
 interface FileHandler {
@@ -16,6 +17,6 @@ data class SensibleDefaultFileHandler(override val outputFolder: File = File("."
 
     override fun findSkyrimFolder()= skyrimFinder.findSkyrimFolder()
     override fun findLoadOrderFile() = skyrimFinder.findLoadOrderFile()
-    override fun recorderFor(modName: String) = consistencyFileHandler.recorderFor(modName)
-    override fun saveConsistency(modName: String) = consistencyFileHandler.saveConsistency(modName)
+    override fun recorderFor(modName: String) = consistencyFileHandler.recorderFor(OriginMod(modName))
+    override fun saveConsistency(modName: String) = consistencyFileHandler.saveConsistency(OriginMod(modName))
 }

@@ -1,25 +1,26 @@
 package com.lunivore.chimmer.helpers
 
-import com.lunivore.chimmer.FormId
+import com.lunivore.chimmer.ExistingFormId
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 
 class FormIdComparatorTest {
+    @UseExperimental(ExperimentalUnsignedTypes::class)
     @Test
     fun `should provide a comparator for FormIds against a known load order`() {
-        // Given a load order with a number of masters
+        // Given a load order with a number of value
         val loadOrder : List<String> =
                 listOf("Skyrim.esm", "Dawnguard.esm", "Hearthfires.esm", "MyMod1.esp", "MyMod2.esp")
 
         // And formIds originating from different mods
         val formIds = listOf(
-                FormId.create("Skyrim.esm", 0x00aaaaaau, listOf("Skyrim.esm")),
-                FormId.create("Dawnguard.esm", 0x01ccccccu, listOf("Skyrim.esm","Dawnguard.esm")),
-                FormId.create("MyMod1.esp", 0x01bbbbbbu, listOf("Skyrim.esm", "Dawnguard.esm")),
-                FormId.create("MyMod2.esp", 0x02eeeeeeu, listOf("Skyrim.esm", "Dawnguard.esm", "MyMod1.esp")),
-                FormId.create("MyMod2.esp", 0x01ddddddu, listOf("Skyrim.esm", "Dawnguard.esm", "MyMod1.esp")),
-                FormId.create("MyMod2.esp", 0x03ffffffu, listOf("Skyrim.esm", "Dawnguard.esm", "MyMod1.esp"))
+                ExistingFormId.create(MastersWithOrigin("Skyrim.esm", listOf()), IndexedFormId(0x00aaaaaau)),
+                ExistingFormId.create(MastersWithOrigin("Dawnguard.esm", listOf("Skyrim.esm","Dawnguard.esm")), IndexedFormId(0x01ccccccu)),
+                ExistingFormId.create(MastersWithOrigin("MyMod1.esp", listOf("Skyrim.esm","Dawnguard.esm")), IndexedFormId(0x01bbbbbbu)),
+                ExistingFormId.create(MastersWithOrigin("MyMod2.esp", listOf("Skyrim.esm", "Dawnguard.esm", "MyMod1.esp")), IndexedFormId(0x02eeeeeeu)),
+                ExistingFormId.create(MastersWithOrigin("MyMod2.esp", listOf("Skyrim.esm", "Dawnguard.esm", "MyMod1.esp")), IndexedFormId(0x01ddddddu)),
+                ExistingFormId.create(MastersWithOrigin("MyMod2.esp", listOf("Skyrim.esm", "Dawnguard.esm", "MyMod1.esp")), IndexedFormId(0x03ffffffu))
         )
 
         // When we sort those FormIds

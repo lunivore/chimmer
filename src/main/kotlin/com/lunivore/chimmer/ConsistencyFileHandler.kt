@@ -2,11 +2,12 @@ package com.lunivore.chimmer
 
 import com.lunivore.chimmer.binary.fromHexStringToByteList
 import com.lunivore.chimmer.binary.toLittleEndianUInt
+import com.lunivore.chimmer.helpers.EditorId
+import com.lunivore.chimmer.helpers.OriginMod
+import com.lunivore.chimmer.helpers.UnindexedFormId
 import java.io.File
 
-typealias ModFilename = String
-typealias NamingConvention = (ModFilename) -> File
-typealias EditorId = String
+typealias NamingConvention = (OriginMod) -> File
 typealias ConsistencyRecorder = (EditorId) -> UnindexedFormId
 typealias MapForMod = MutableMap<EditorId, UnindexedFormId>
 
@@ -15,53 +16,52 @@ class ConsistencyFileHandler(private val workingDirectory : File,
                              private val namingConvention: NamingConvention
                                 = { File(workingDirectory, "chimmer/${it}_consistency.txt") }) {
 
-    private val mapsForMods : MutableMap<ModFilename, MapForMod> = mutableMapOf()
+    private val mapsForMods : MutableMap<OriginMod, MapForMod> = mutableMapOf()
 
     // TODO: This needs to be a constant, and then the dynamic one needs to exist per mod.
     // But we need to do a bunch of work around the last used record anyway.
     private var lastUsedId: UInt = 2047u
 
-    private fun findOrCreate(modFilename : ModFilename, editorId: EditorId): UnindexedFormId {
-        val mapForMod = mapsForMods[modFilename] ?: mutableMapOf()
-        mapsForMods[modFilename] = mapForMod
+    private fun findOrCreate(originMod : OriginMod, editorId: EditorId): UnindexedFormId {
+        val mapForMod = mapsForMods[originMod] ?: mutableMapOf()
+        mapsForMods[originMod] = mapForMod
 
-        val formId = mapForMod[editorId]
-        return if (formId == null) {
-            val nextId = lastUsedId + 1u
+        val unindexedFormId = mapForMod[editorId]
+        return if (unindexedFormId == null) {
+            val nextId = UnindexedFormId(lastUsedId + 1u)
             mapForMod[editorId] = nextId
-            lastUsedId = nextId
-
+            lastUsedId = nextId.value
             nextId }
         else {
-            formId
+            unindexedFormId
         }
     }
 
-    fun recorderFor(modFilename : ModFilename): ConsistencyRecorder {
+    fun recorderFor(modFilename : OriginMod): ConsistencyRecorder {
         val mapForMod = mapsForMods[modFilename] ?: mutableMapOf()
         mapsForMods[modFilename] = mapForMod
 
         val file = namingConvention(modFilename)
         if (file.exists()) {
             val pairLines = file.readLines()
-            val splitLines: List<Pair<String, UInt>> = pairLines.map {
+            val splitLines: List<Pair<EditorId, UnindexedFormId>> = pairLines.map {
                 it.split(":")
-            }.map { Pair(it[0], it[1].fromHexStringToByteList().toLittleEndianUInt() ) } // TODO: Kotlin's added radix stuff now; may be a better way
+            }.map { Pair(EditorId(it[0]), UnindexedFormId(it[1].fromHexStringToByteList().toLittleEndianUInt())) } // TODO: Kotlin's added radix stuff now; may be a better way
             mapForMod.putAll(splitLines)
-            lastUsedId = splitLines.lastOrNull()?.second ?: 2047u
+            lastUsedId = splitLines.lastOrNull()?.second?.value ?: 2047u
         }
         return { findOrCreate(modFilename, it) }
     }
 
-    fun saveConsistency(modFilename: ModFilename) {
-        val file = namingConvention(modFilename)
+    fun saveConsistency(originMod: OriginMod) {
+        val file = namingConvention(originMod)
         if (!file.parentFile.exists()) { file.parentFile.mkdirs() }
         file.createNewFile()
 
-        val mapForMod = mapsForMods[modFilename] ?: mutableMapOf()
+        val mapForMod = mapsForMods[originMod] ?: mutableMapOf()
         mapForMod.forEach {
-            val unindexedFormIdAsString = it.value.toString(16).padStart(6, '0')
-            file.appendText("${it.key}:${unindexedFormIdAsString}")
+            val unindexedFormIdAsString = it.value.value.toString(16).padStart(6, '0')
+            file.appendText("${it.key.value}:${unindexedFormIdAsString}")
             file.appendText(System.lineSeparator())
         }
     }

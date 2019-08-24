@@ -31,6 +31,9 @@ fun UShort.toLittleEndianBytes(): ByteArray {
     return bytes
 }
 
+@ExperimentalUnsignedTypes
+fun UShort.toLittleEndianByteList(): List<Byte> = this.toLittleEndianBytes().toList()
+
 /** Used for things like the Skyrim version, which is 1.7 */
 @UseExperimental(ExperimentalUnsignedTypes::class)
 fun List<Byte>.toLittleEndianFloat(): Float {
@@ -46,6 +49,8 @@ fun Short.toLittleEndianBytes(): ByteArray {
     return bytes
 }
 
+fun Short.toLittleEndianByteList(): List<Byte> = this.toLittleEndianBytes().toList()
+
 @ExperimentalUnsignedTypes
 fun UInt.toLittleEndianBytes(): ByteArray {
     val bytes = ByteArray(4)
@@ -56,6 +61,8 @@ fun UInt.toLittleEndianBytes(): ByteArray {
 }
 
 @ExperimentalUnsignedTypes
+fun UInt.toLittleEndianByteList(): List<Byte> = this.toLittleEndianBytes().toList()
+
 fun Int.toLittleEndianBytes(): ByteArray {
     val bytes = ByteArray(4)
     for (i in 0..3) {
@@ -64,10 +71,18 @@ fun Int.toLittleEndianBytes(): ByteArray {
     return bytes
 }
 
+fun UInt.toBigEndianHexString(): String {
+    return this.toString(16).padStart(8, '0').toUpperCase()
+}
+
+fun Int.toLittleEndianByteList(): List<Byte> = this.toLittleEndianBytes().toList()
+
 @UseExperimental(ExperimentalUnsignedTypes::class)
 fun Float.toLittleEndianBytes(): ByteArray {
     return this.toBits().toUInt().toLittleEndianBytes()
 }
+
+fun Float.toLittleEndianByteList(): List<Byte> = this.toLittleEndianBytes().toList()
 
 fun String.toByteList(): List<Byte> {
     return this.toByteArray().toList()
@@ -85,4 +100,4 @@ fun ByteArray.toReadableHexString(): String {
 
 fun List<Byte>.toReadableHexString() = this.toByteArray().toReadableHexString()
 
-fun Subrecord.toReadableHexString() = this.bytes.toReadableHexString()
+fun Subrecord.toReadableHexString() = this.asBytes().toReadableHexString()

@@ -59,7 +59,7 @@ class CreatingANewMod : ChimmerScenario() {
         // Then the sword should have the same ID
         val reloadedSwordId1 = reloadedMod1.weapons.first().formId
         val reloadedSwordId2 = reloadedMod2.weapons.first().formId
-        assertEquals((reloadedSwordId1 as ExistingFormId).toBigEndianHexString(), (reloadedSwordId2 as ExistingFormId).toBigEndianHexString())
+        assertEquals(reloadedSwordId1, reloadedSwordId2)
     }
 
 }

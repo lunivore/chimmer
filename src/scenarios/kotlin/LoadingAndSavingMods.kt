@@ -1,5 +1,6 @@
 package com.lunivore.chimmer
 
+import com.lunivore.chimmer.binary.toBigEndianHexString
 import com.lunivore.chimmer.testheplers.asResourceFile
 import org.junit.Assert.*
 import org.junit.Test
@@ -116,6 +117,6 @@ class LoadingAndSavingMods  : ChimmerScenario() {
         var mods = chimmer.load(modDirectory, plugins,  ModsToLoad.SKIP_BETHESDA_MODS)
 
         // Then we should be able to see those records too
-        assertEquals("00000EB4", (mods[0].npcs[0].formId as ExistingFormId).toBigEndianHexString())
+        assertEquals("00000EB4", (mods[0].npcs[0].formId as ExistingFormId).unindexed.toBigEndianHexString())
     }
 }

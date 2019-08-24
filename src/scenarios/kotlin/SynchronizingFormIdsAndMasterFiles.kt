@@ -1,6 +1,10 @@
 package com.lunivore.chimmer
 
 import com.lunivore.chimmer.binary.ModBinary
+import com.lunivore.chimmer.helpers.IndexedFormId
+import com.lunivore.chimmer.helpers.MastersWithOrigin
+import com.lunivore.chimmer.helpers.OriginMod
+import com.lunivore.chimmer.skyrim.Keyword
 import com.lunivore.chimmer.testheplers.asResourceFile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -54,7 +58,6 @@ class SynchronizingFormIdsAndMasterFiles()  : ChimmerScenario() {
         asResourceFile("IronSword.esp").copyTo(File(outputFolder.root, "IronSword.esp"))
         val reloadedMods = chimmer.load(outputFolder.root, listOf("Skyrim.esm", "IronSword.esp", modName1, modName2),  ModsToLoad.SKIP_BETHESDA_MODS)
 
-
         val mergedModName = "IronSwords_${System.currentTimeMillis()}.esp"
         val mergedMod = chimmer.createMod(mergedModName)
                 .withWeapons(listOf(reloadedMods[1].weapons[0], reloadedMods[2].weapons[0]))
@@ -62,8 +65,8 @@ class SynchronizingFormIdsAndMasterFiles()  : ChimmerScenario() {
         // And we save that mod
         chimmer.save(mergedMod)
 
-        // Then the hex representing the two form ids should have the index of the appropriate masters
-        val mergedModBinary = ModBinary.parse(mergedModName, File(outputFolder.root, mergedModName).readBytes())
+        // Then the hex representing the two form ids should have the index of the appropriate value
+        val mergedModBinary = ModBinary.parse(OriginMod(mergedModName), File(outputFolder.root, mergedModName).readBytes())
 
         val weaps = mergedModBinary.grups[0]
         val formIds = weaps.map { it.formId }
@@ -82,10 +85,14 @@ class SynchronizingFormIdsAndMasterFiles()  : ChimmerScenario() {
 
         // When we add the crossbow, then the sword with a keyword from another mod and save it as a new mod
         // (we need to add the crossbow to force update the ids)
-        val oldSword = mods[0].weapons.first()
-        val crossbow = mods[1].weapons[1]
+        val ironSwordMod = mods[0]
+        val armorBootsSwordCrossbowMod = mods[1]
+        val miscKeywordMod = mods[2]
 
-        val keywordToAdd = mods[2].keywords.first().formId as ExistingFormId
+        val oldSword = ironSwordMod.weapons.first()
+        val crossbow = armorBootsSwordCrossbowMod.weapons[1]
+
+        val keywordToAdd = miscKeywordMod.keywords.first().formId as ExistingFormId
         val newModName = "NewMod_${System.currentTimeMillis()}.esp"
         val newSword = oldSword.copyAsNew(newModName, "MyMod_IronSword").plusKeyword(keywordToAdd)
 
@@ -103,12 +110,35 @@ class SynchronizingFormIdsAndMasterFiles()  : ChimmerScenario() {
 
         // Then the keyword should be updated to reflect the position in the new masterlist
         // (Remember we don't actually load Skyrim or Dawnguard!)
-        val expectedKeyword = FormId.create(newModName, 0x01000000u or (keywordToAdd).unindexed, listOf("Skyrim.esm", "Dawnguard.esm", "MiscellaneousKeyword.esp")) as ExistingFormId
+        val expectedKeyword = ExistingFormId.create(MastersWithOrigin(newModName, listOf("Skyrim.esm", "Dawnguard.esm", "MiscellaneousKeyword.esp")), IndexedFormId(0x02000000u or (keywordToAdd).unindexed)) as ExistingFormId
+
         val reloadedSword = reloadedMods[2].weapons[1]
         val actualKeyword = reloadedSword.keywords[3] as ExistingFormId
 
-        // (This first line is just easier to read if it goes wrong)
-        assertEquals(expectedKeyword.toBigEndianHexString(), actualKeyword.toBigEndianHexString())
-        assertEquals(expectedKeyword.key, actualKeyword.key)
+        assertEquals(expectedKeyword, actualKeyword)
+    }
+
+    @Test
+    fun `should be able to use new FormIds before saving them`() {
+        // Given a mod with an Iron Sword in it
+        val plugins = listOf("Skyrim.esm", "IronSword.esp")
+        val modDirectory = asResourceFile("plugins.txt").parentFile
+        var chimmer = Chimmer(fileHandler())
+        val ironSwordMod = chimmer.load(modDirectory, plugins,  ModsToLoad.SKIP_BETHESDA_MODS)[0]
+
+        // When we create a new keyword then copy the Iron Sword over with that keyword attached
+        val keyword = Keyword.create("MyMod.esp", "MyKeyword", 0u)
+        val myMod= chimmer.createMod("MyMod.esp")
+                .withKeywords(listOf(keyword))
+                .withWeapons(listOf(ironSwordMod.weapons[0].withKeywords(listOf(keyword.formId))))
+
+        // And save it
+        chimmer.save(myMod, listOf("Skyrim.esm"))
+
+        // Then load it again
+        val myReloadedMod = chimmer.load(outputFolder.root, listOf("Skyrim.esm", "MyMod.esp"), ModsToLoad.SKIP_BETHESDA_MODS)[0]
+
+        // Then the keyword should now be an existing keyword with the same consistent form id.
+        assertEquals(myReloadedMod.weapons[0].keywords[0], myReloadedMod.keywords[0].formId)
     }
 }

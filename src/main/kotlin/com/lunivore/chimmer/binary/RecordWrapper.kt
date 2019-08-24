@@ -8,5 +8,5 @@ interface RecordWrapper<T : RecordWrapper<T>> {
     fun copyAsNew(newMaster : String, editorId : String): T
     val formId: FormId
     val record: Record
-    val loadingMod: String?
+    val originMod: String?
 }

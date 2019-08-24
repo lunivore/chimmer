@@ -1,7 +1,7 @@
 package com.lunivore.chimmer
 
-import com.lunivore.chimmer.binary.toLittleEndianBytes
-import com.lunivore.chimmer.testheplers.toReadableHexString
+import com.lunivore.chimmer.helpers.EditorId
+import com.lunivore.chimmer.helpers.OriginMod
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -25,13 +25,13 @@ class ConsistencyFileHandlerTest {
         """.trimIndent().toByteArray())
 
         // When we ask the consistency file handler for a form id for an existing editor id
-        val consistencyRecorder = ConsistencyFileHandler(outputFolder.root, {File(outputFolder.root, consistencyFile.name)}).recorderFor(modName)
-        val unindexedFormId = consistencyRecorder("MY_MOD_EditorId_123456")
+        val consistencyRecorder = ConsistencyFileHandler(outputFolder.root, {File(outputFolder.root, consistencyFile.name)}).recorderFor(OriginMod(modName))
+        val unindexedFormId = consistencyRecorder(EditorId("MY_MOD_EditorId_123456"))
 
         // Then it should give it back to us
         // (remembering that all ints are 4 bytes, of which the unindexed form Id takes 3,
         // and all little Endian ints are reversed so the extra 00 will be at the end)
-        assertEquals("98 76 AB 00", unindexedFormId.toLittleEndianBytes().toReadableHexString())
+        assertEquals("98 76 AB 00", unindexedFormId.toReadableHexString())
     }
 
     @Test
@@ -48,12 +48,12 @@ class ConsistencyFileHandlerTest {
         """.trimIndent().toByteArray())
 
         // When we ask the consistency file handler for a form id for a new editor id
-        val consistencyRecorder = ConsistencyFileHandler(outputFolder.root, {File(outputFolder.root, consistencyFile.name)}).recorderFor(modName)
-        val unindexedFormId = consistencyRecorder("MY_MOD_NewId_7890ab")
+        val consistencyRecorder = ConsistencyFileHandler(outputFolder.root, {File(outputFolder.root, consistencyFile.name)}).recorderFor(OriginMod(modName))
+        val unindexedFormId = consistencyRecorder(EditorId("MY_MOD_NewId_7890ab"))
 
         // Then it should give the next form id back to us (remembering that for little-Endian bytes, the smallest
         // byte that gets incremented is on the left and we get a spare zero byte back too)
-        assertEquals("99 76 AC 00", unindexedFormId.toLittleEndianBytes().toReadableHexString())
+        assertEquals("99 76 AC 00", unindexedFormId.toReadableHexString())
 
         // Tidying up
         consistencyFile.delete()
@@ -66,17 +66,17 @@ class ConsistencyFileHandlerTest {
         val modName = "myMod_${System.currentTimeMillis()}"
 
         // When we ask the consistency file handler for a form id for a new editor id
-        val consistencyRecorder = ConsistencyFileHandler(outputFolder.root).recorderFor(modName)
-        val unindexedFormId = consistencyRecorder("MY_MOD_NewId_7890ab")
+        val consistencyRecorder = ConsistencyFileHandler(outputFolder.root).recorderFor(OriginMod(modName))
+        val unindexedFormId = consistencyRecorder(EditorId("MY_MOD_NewId_7890ab"))
 
         // Then it should give us back an id of 2048
-        assertEquals(2048u, unindexedFormId)
+        assertEquals(2048u, unindexedFormId.value)
 
         // When we ask for the next one
-        val nextId = consistencyRecorder("MY_MOD_AnotherNewId")
+        val nextId = consistencyRecorder(EditorId("MY_MOD_AnotherNewId"))
 
         // Then it should give us back an id of 2049
-        assertEquals(2049u, nextId)
+        assertEquals(2049u, nextId.value)
     }
 
     @Test
@@ -85,12 +85,12 @@ class ConsistencyFileHandlerTest {
         val modName = "new_folder_${System.currentTimeMillis()}/also_new/myMod"
 
         // When we ask for a new id
-        val handler = ConsistencyFileHandler(outputFolder.root) {File(outputFolder.root, it)}
-        val consistencyRecorder = handler.recorderFor(modName)
-        val unindexedFormId = consistencyRecorder("MY_MOD_NewId_7890ab")
+        val handler = ConsistencyFileHandler(outputFolder.root) {File(outputFolder.root, it.value)}
+        val consistencyRecorder = handler.recorderFor(OriginMod(modName))
+        val unindexedFormId = consistencyRecorder(EditorId("MY_MOD_NewId_7890ab"))
 
         // and then save the file for that mod
-        handler.saveConsistency(modName)
+        handler.saveConsistency(OriginMod(modName))
 
         // then the file and all folders should be created
         val newFile = File(outputFolder.root, modName)

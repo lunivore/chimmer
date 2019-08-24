@@ -2,6 +2,7 @@ package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.ConsistencyRecorder
 import com.lunivore.chimmer.Logging
+import com.lunivore.chimmer.helpers.MastersWithOrigin
 
 /**
  * See: https://en.uesp.net/wiki/Tes5Mod:Mod_File_Format#Groups
@@ -13,7 +14,7 @@ data class Grup(val type: String, val headerBytes: List<Byte>, val records: List
         val EMPTY_HEADER_BYTES = ByteArray(12).toList()
         val logger by Logging()
 
-        fun parseAll(loadingMod: String, bytes: List<Byte>, masters: List<String>): List<Grup> {
+        fun parseAll(mastersWithOrigin: MastersWithOrigin, bytes: List<Byte>): List<Grup> {
 
             val grups = mutableListOf<Grup>()
             var rest = bytes
@@ -28,7 +29,7 @@ data class Grup(val type: String, val headerBytes: List<Byte>, val records: List
 
                 logger.info("Found Grup $type with length $grupLength")
 
-                val grup = Grup(loadingMod, type, grupHeaderBytes, recordBytes, masters)
+                val grup = Grup(mastersWithOrigin, type, grupHeaderBytes, recordBytes)
 
                 grups.add(grup)
             }
@@ -37,13 +38,13 @@ data class Grup(val type: String, val headerBytes: List<Byte>, val records: List
 
     }
 
-    constructor(loadingMod: String, type: String, headerBytes: List<Byte>, records: List<Byte>, masters: List<String>) :
-            this(type, headerBytes, RecordParser().parseAll(loadingMod, records, masters).parsed)
+    constructor(mastersWithOrigin: MastersWithOrigin, type: String, headerBytes: List<Byte>, records: List<Byte>) :
+            this(type, headerBytes, RecordParser().parseAll(mastersWithOrigin, records).parsed)
 
-    fun render(masters: List<String>, consistencyRecorder : ConsistencyRecorder, renderer: (ByteArray) -> Unit) {
+    fun render(mastersWithOrigin: MastersWithOrigin, consistencyRecorder : ConsistencyRecorder, renderer: (ByteArray) -> Unit) {
 
         var lengthOfRecords = 0
-        forEach { it.render(masters, consistencyRecorder) { lengthOfRecords += it.size } }
+        forEach { it.render(mastersWithOrigin, consistencyRecorder) { lengthOfRecords += it.size } }
 
         val lengthIncludingGroupHeader = 24 + lengthOfRecords
 
@@ -51,7 +52,7 @@ data class Grup(val type: String, val headerBytes: List<Byte>, val records: List
         renderer(lengthIncludingGroupHeader.toLittleEndianBytes())
         renderer(type.toByteArray())
         renderer(headerBytes.toByteArray())
-        forEach { it.render(masters, consistencyRecorder, renderer) }
+        forEach { it.render(mastersWithOrigin, consistencyRecorder, renderer) }
     }
 
     fun isType(type: String): Boolean {

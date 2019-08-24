@@ -1,5 +1,6 @@
 package com.lunivore.chimmer.binary
 
+import com.lunivore.chimmer.helpers.MastersWithOrigin
 import com.lunivore.chimmer.testheplers.Hex
 import com.lunivore.chimmer.testheplers.fakeConsistencyRecorder
 import com.lunivore.chimmer.testheplers.toReadableHexString
@@ -15,7 +16,7 @@ class GrupTest {
         val hex = Hex.IRON_SWORD_WEAPON_GROUP + Hex.UNINTERESTING_COLOUR_GROUP
 
         // When we parse the group
-        val grups = Grup.parseAll("Wibble.esp", hex.fromHexStringToByteList(), listOf("Skyrim.esm"))
+        val grups = Grup.parseAll(MastersWithOrigin("Wibble.esp", listOf("Skyrim.esm")), hex.fromHexStringToByteList())
 
         // Then we should be able to get the top-level records from it
         val weaponGrup = grups.first()
@@ -30,16 +31,16 @@ class GrupTest {
         val groupHeaderBytes = Hex.IRON_SWORD_GROUP_HEADER.fromHexStringToByteList().subList(12, 24)
         val recordHex = Hex.IRON_SWORD_WEAPON + " " + Hex.CROSSBOW_WEAPON
         val recordBytes = recordHex.fromHexStringToByteList()
-        val masters = listOf("Skyrim.esm", "Dawnguard.esm")
-        val grup = Grup("WEAP", groupHeaderBytes, RecordParser().parseAll("Wibble.esp", recordBytes, masters).parsed)
+        val mastersWithOrigin = MastersWithOrigin("Wibble.esp", listOf("Skyrim.esm", "Dawnguard.esm"))
+        val grup = Grup("WEAP", groupHeaderBytes, RecordParser().parseAll(mastersWithOrigin, recordBytes).parsed)
 
         // When we render the group back to bytes again
         val renderer = ByteArrayOutputStream()
-        grup.render(masters, ::fakeConsistencyRecorder) { renderer.write(it) }
+        grup.render(mastersWithOrigin, ::fakeConsistencyRecorder) { renderer.write(it) }
 
         // Then it should contain the same bytes as the original
         val result = renderer.toByteArray()
-        val actualContents = result.toList().subList(24, result.size).toReadableHexString()
+        val actualContents = result.toList().subList(24, result.size).toByteArray().toReadableHexString()
         assertEquals(recordHex, actualContents)
 
         // And it should have a size field of 24 + record data size

@@ -4,12 +4,15 @@ import com.lunivore.chimmer.ConsistencyRecorder
 import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.binary.ModBinary.Companion.GRUP_ORDER
 import com.lunivore.chimmer.helpers.FormIdComparator
+import com.lunivore.chimmer.helpers.LoadOrder
+import com.lunivore.chimmer.helpers.MastersWithOrigin
+import com.lunivore.chimmer.helpers.OriginMod
 
 
 // TODO: Recalculate next available object id (highest + 1024), number of records and groups, and the masterlist.
 
 @UseExperimental(ExperimentalUnsignedTypes::class)
-data class ModBinary(val modName: String?, val header: Record, val grups: List<Grup>) : List<Grup> by grups {
+data class ModBinary(val originMod: OriginMod, val header: Record, val grups: List<Grup>) : List<Grup> by grups {
     companion object {
         internal val GRUP_ORDER = fromCommaDelimitedToList("""
             GMST, KYWD, LCRT, AACT, TXST, GLOB, CLAS, FACT,
@@ -36,47 +39,36 @@ data class ModBinary(val modName: String?, val header: Record, val grups: List<G
         private fun fromCommaDelimitedToList(grupList: String) =
                 grupList.lines().joinToString("").split(",").map {it.trim()}
 
-        fun parse(loadingMod: String, bytes: ByteArray): ModBinary {
-            val menu = SkyrimSubrecordMenu()
-
-            val result = RecordParser().parseTes4(loadingMod, bytes.toList())
+        fun parse(originMod: OriginMod, bytes: ByteArray): ModBinary {
+            val result = RecordParser().parseTes4(originMod, bytes.toList())
 
             val headerRecord = result.parsed
-            val grups = Grup.parseAll(loadingMod, result.rest, headerRecord.masters)
+            val grups = Grup.parseAll(MastersWithOrigin(originMod.value, headerRecord.masters), result.rest)
 
-            return ModBinary(loadingMod, headerRecord, grups)
+            return ModBinary(originMod, headerRecord, grups)
         }
 
-        fun create(): ModBinary {
+        fun create(modName: String): ModBinary {
 
             val tes4 = RecordParser().createTes4()
-            return ModBinary(null, tes4, listOf())
+            return ModBinary(OriginMod(modName), tes4, listOf())
         }
     }
 
     val masters: Set<String>
         get() {
-            return grups.flatMap { it.records.flatMap { it.masters.plus(it.formId.master) } }.filterNot { it.isNullOrEmpty() }.map { it!! }.toSet()
-//
-//            val mastersOfRecords = grups.flatMap { it.records.flatMap { it.masters.plus(it.formId.master) } }
-//            val originsWhereNoMasters = grups.flatMap {
-//                it.records.flatMap {
-//                    if (it.formId.master == null) listOf(it.formId.originMod) else listOf<String>()
-//                }
-//            }
-//            val mastersToUse = (mastersOfRecords + originsWhereNoMasters).filterNot { it.isNullOrEmpty() }.map { it!! }.toSet()
-//            return mastersToUse
+            return grups.flatMap { it.records.flatMap { it.masters } }.filterNot { it.isNullOrEmpty() }.map { it!! }.toSet()
         }
 
-    fun render(loadOrderForMasters: List<String>, consistencyRecorder: ConsistencyRecorder, renderer: (ByteArray) -> Unit) {
+    fun render(loadOrderForMasters: LoadOrder, consistencyRecorder: ConsistencyRecorder, renderer: (ByteArray) -> Unit) {
 
-        val mastersToUse = masters
-        val orderedMasters = loadOrderForMasters.filter { mastersToUse.contains(it) }.plus(
-                mastersToUse.filter { !loadOrderForMasters.contains(it) }
-        )
+        val mastersInLoadOrder = loadOrderForMasters.value.filter { masters.contains(it) }
+        val mastersNotInLoadOrder = masters.filter { !loadOrderForMasters.value.contains(it) }
+        val orderedMasters = mastersInLoadOrder.plus(mastersNotInLoadOrder).filterNot { it == originMod.value }
+        val mastersWithOrigin = MastersWithOrigin(originMod.value, orderedMasters)
 
-        header.render(orderedMasters, consistencyRecorderForTes4, renderer)
-        grups.forEach { it.render(orderedMasters, consistencyRecorder, renderer) }
+        header.render(mastersWithOrigin, consistencyRecorderForTes4, renderer)
+        grups.forEach { it.render(mastersWithOrigin, consistencyRecorder, renderer) }
     }
 
     fun <T : RecordWrapper<T>> createOrReplaceGrup(type: String, recordWrappers: List<T>): ModBinary {
@@ -105,7 +97,7 @@ data class ModBinary(val modName: String?, val header: Record, val grups: List<G
     fun find(type: String): Grup? = find { it.type == type }
 }
 
-fun List<ModBinary>.merge(loadOrder: List<String>): ModBinary {
+fun List<ModBinary>.merge(newModName: String, loadOrder: List<String>): ModBinary {
     try {
 
         // Creates a list of all the grups for each grupname, eg:
@@ -140,7 +132,7 @@ fun List<ModBinary>.merge(loadOrder: List<String>): ModBinary {
                         .sortedWith(comparator).map { mappy[it]!! })
         }.filterNotNull()
 
-        return ModBinary.create().copy(grups = newGrups)
+        return ModBinary.create(newModName).copy(grups = newGrups)
     } catch (e: Exception) {
         throw Exception("Error merging mods, loadOrder=${loadOrder}", e)
     }

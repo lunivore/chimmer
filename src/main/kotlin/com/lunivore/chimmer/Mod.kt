@@ -2,6 +2,7 @@ package com.lunivore.chimmer
 
 import com.lunivore.chimmer.binary.ModBinary
 import com.lunivore.chimmer.binary.merge
+import com.lunivore.chimmer.helpers.LoadOrder
 import com.lunivore.chimmer.skyrim.Armor
 import com.lunivore.chimmer.skyrim.Keyword
 import com.lunivore.chimmer.skyrim.Npc
@@ -28,18 +29,22 @@ data class Mod(val name: String, internal val modBinary: ModBinary) {
         get() = modBinary.masters
 
 
-    fun renderTo(loadOrderForMasters: List<ModFilename>, consistencyRecorder: ConsistencyRecorder, renderer: (ByteArray) -> Unit) {
-        modBinary.render(loadOrderForMasters, consistencyRecorder, renderer)
+    fun renderTo(loadOrderForMasters: List<String>, consistencyRecorder: ConsistencyRecorder, renderer: (ByteArray) -> Unit) {
+        modBinary.render(LoadOrder(loadOrderForMasters), consistencyRecorder, renderer)
     }
 
     fun withWeapons(weapons: List<Weapon>): Mod {
         return Mod(name, modBinary.createOrReplaceGrup("WEAP", weapons))
     }
+
+    fun withKeywords(keywords: List<Keyword>): Mod {
+        return Mod(name, modBinary.createOrReplaceGrup("KYWD", keywords))
+    }
 }
 
 fun List<Mod>.merge(modName: String, loadOrder: List<String>) : Mod {
     val modBinaries : List<ModBinary> = this.map { it.modBinary }
-    return Mod(modName, modBinaries.merge(loadOrder))
+    return Mod(modName, modBinaries.merge(modName, loadOrder))
 
 }
 

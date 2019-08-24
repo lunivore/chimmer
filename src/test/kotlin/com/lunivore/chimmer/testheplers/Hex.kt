@@ -1,6 +1,5 @@
 package com.lunivore.chimmer.testheplers
 
-import com.lunivore.chimmer.binary.Subrecord
 import javax.xml.bind.DatatypeConverter
 
 fun ByteArray.toReadableHexString(): String {
@@ -8,10 +7,6 @@ fun ByteArray.toReadableHexString(): String {
         string + char + (if (i % 2 > 0) " " else "")
     }.trimEnd()
 }
-
-fun List<Byte>.toReadableHexString() = this.toByteArray().toReadableHexString()
-
-fun Subrecord.toReadableHexString() = this.bytes.toReadableHexString()
 
 class Hex {
 
