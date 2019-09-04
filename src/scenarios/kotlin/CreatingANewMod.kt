@@ -17,7 +17,7 @@ class CreatingANewMod : ChimmerScenario() {
         val chimmer = Chimmer(fileHandler())
         var mods = chimmer.load(modDirectory, plugins,  ModsToLoad.SKIP_BETHESDA_MODS)
 
-        // When we parse a new mod with the same iron sword
+        // When we parseAll a new mod with the same iron sword
         val modName = "NewIronSword_${System.currentTimeMillis()}.esp"
         val mod = chimmer.createMod(modName).withWeapons(mods[0].weapons)
 

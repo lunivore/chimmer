@@ -5,6 +5,9 @@ import com.lunivore.chimmer.ExistingFormId
 import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.Logging
 import com.lunivore.chimmer.helpers.*
+import java.io.ByteArrayOutputStream
+import java.util.zip.Inflater
+import java.util.zip.InflaterOutputStream
 import javax.xml.bind.DatatypeConverter
 
 /**
@@ -16,19 +19,21 @@ import javax.xml.bind.DatatypeConverter
  * every mod. Note that the TES4 header is where the value originate, so any TES4 record will ignore the (usually
  * empty) list of value passed in.
  *
- * To avoid having to parse every record, a record will either be constructed with subrecords, or with recordBytes;
+ * To avoid having to parseAll every record, a record will either be constructed with subrecords, or with recordBytes;
  * they may be turned into subrecords later. Don't use both!
  *
  * See http://en.uesp.net/wiki/Tes5Mod:Mod_File_Format#Records
  */
 @UseExperimental(ExperimentalUnsignedTypes::class)
-data class Record private constructor(val type: String, val flags: UInt, val formId: FormId, val formVersion: UShort, val recordBytes: List<Byte>?, var lazySubrecords: List<Subrecord>?,
+data class Record private constructor(val type: String, val flags: UInt, val formId: FormId, val formVersion: UShort, val recordBytes: List<Byte>?, private var lazySubrecords: List<Subrecord>?,
                                       private val mastersForParsing: Masters, val menu: SubrecordMenu) {
 
-    // TODO: Masters shouldn't be stored here really; we can derive it from all the FormIdSubs etc. if we denote them as containing FormIds.
-    // We already throw a wobbly if anyone tries to convert records with a new masterlist without rendering them to Subs first.
-
     companion object {
+        enum class Flags(val flag : UInt) {
+            DATA_IS_COMPRESSED(0x00040000u);
+
+            fun isSetIn(candidateFlags : UInt) = candidateFlags.and(flag) > 0u
+        }
 
         val SUPPORTED_RECORD_TYPES_TO_SUB_TYPES = mapOf(
                 "WEAP" to "EDID, VMAD, OBND, FULL, MODL, MODS, EITM, EAMT, ETYP, BIDS, BAMT, YNAM, ZNAM, KSIZ, KWDA, DESC, INAM, WNAM, SNAM, XNAM, NAM7, TNAM, UNAM, NAM9, NAM8, DATA, DNAM, CRDT, VNAM, CNAM".split(", "),
@@ -43,7 +48,7 @@ data class Record private constructor(val type: String, val flags: UInt, val for
             return Record(type, flags, formId, formVersion, null, lazySubrecords, masters, SubrecordMenu.UNUSED)
         }
 
-        fun createWithBytes(mastersWithOrigin : MastersWithOrigin, headerBytes: List<Byte>, recordBytes: List<Byte>?, menu: SubrecordMenu) : Record {
+        fun createWithBytes(mastersWithOrigin : MastersWithOrigin, headerBytes: List<Byte>, recordBytes: List<Byte>, menu: SubrecordMenu) : Record {
             // We discard everything else in the Record header as it's either never used
             // or we'll derive it (e.g.: data size).
             return Record(String(headerBytes.subList(0, 4).toByteArray()), // Type
@@ -54,14 +59,14 @@ data class Record private constructor(val type: String, val flags: UInt, val for
         }
 
         fun createWithSubrecords(mastersWithOrigin: MastersWithOrigin, headerBytes: List<Byte>, subrecords: List<Subrecord>?, menu: SubrecordMenu) : Record {
-            // We discard everything else in the Record header as it's either never used
-            // or we'll derive it (e.g.: data size).
             return Record(String(headerBytes.subList(0, 4).toByteArray()), // Type
                     headerBytes.subList(8, 12).toLittleEndianUInt(),  // Flags
                     ExistingFormId.create(mastersWithOrigin, IndexedFormId(headerBytes.subList(12, 16).toLittleEndianUInt())),  // FormId (indexed to given value)
                     headerBytes.subList(20, 22).toLittleEndianUShort(), // Version; Oldrim = 43, SSE = 44
                     null, subrecords, Masters(mastersWithOrigin.masters), menu)
         }
+
+        private val inflater = Inflater()
     }
 
     val masters: List<String>
@@ -77,13 +82,25 @@ data class Record private constructor(val type: String, val flags: UInt, val for
     val subrecords : List<Subrecord>
         get() {
             if (lazySubrecords == null) {
-                val result = Subrecord.parse(menu, type, MastersWithOrigin(formId.originMod, mastersForParsing.value), recordBytes!!)
-                if (result.failed) throw IllegalStateException(createMalformedErrorMessage(type, recordBytes!!, formId.master))
-
-                lazySubrecords = result.parsed
+                val bytesToUse = if (Flags.DATA_IS_COMPRESSED.isSetIn(flags)) unzip(recordBytes!!) else recordBytes!!
+                lazySubrecords = parseSubrecords(bytesToUse)
             }
             return lazySubrecords!!
         }
+
+    private fun unzip(inputBytes: List<Byte>): List<Byte> {
+        val out = ByteArrayOutputStream()
+        val outStream = InflaterOutputStream(out, inflater)
+        outStream.write(inputBytes.subList(4, inputBytes.size).toByteArray())
+        outStream.close()
+        return out.toByteArray().toList()
+    }
+
+    private fun parseSubrecords(bytes: List<Byte>): List<Subrecord> {
+        val result = Subrecord.parseAll(menu, type, MastersWithOrigin(formId.originMod, mastersForParsing.value), bytes!!)
+        if (result.failed) throw IllegalStateException(createMalformedErrorMessage(type, bytes, formId.master))
+        return result.parsed
+    }
 
     private fun createMalformedErrorMessage(type: String, bytes: List<Byte>, modName: String): String {
         return "Record $type with formId ${formIdAsString(bytes)} malformed in mod $modName"
@@ -150,26 +167,6 @@ data class Record private constructor(val type: String, val flags: UInt, val for
         val nextMasterIndex = newMasters.value.size
         val indexedFormId = (nextMasterIndex.toUInt() shl 24) + unindexedFormId.value
         return IndexedFormId(indexedFormId)
-    }
-
-    private fun reindexExistingFormIdForNewMasters(newMasters: List<String>): UInt {
-        // TODO: Remove this once the FormId is inside a FormIdSub
-        val existingFormId = formId as ExistingFormId
-
-        // Note that we can't currently reindex all internal formIds, so if this hasn't been converted to
-        // subrecords (because we know how to convert it), and the value have changed, that's a VERY BAD THING.
-        // It's fine if the original value are still at the start of the new master list though.
-        val newMasterlistIncompatible = newMasters.size < mastersForParsing.value.size || newMasters.subList(0, mastersForParsing.value.size) != mastersForParsing.value
-        if (lazySubrecords == null && newMasterlistIncompatible) {
-            throw IllegalStateException("""
-                Attempted to reindex unworked record $type with ${formId.asDebug()}; 
-                old value was $masters, new value are $newMasters. Please explicitly convert to subrecords before trying to reindex."""
-                    .trimIndent())
-        }
-
-        val newMasterIndex = newMasters.indexOf(formId.master)
-        if (newMasterIndex == -1) { throw IllegalArgumentException("The master ${formId.master} was not found in the masterlist $newMasters.") }
-        return (newMasterIndex.toUInt() shl 24) + existingFormId.unindexed
     }
 
     fun copyAsNew(modItGoesInto: OriginMod, editorId: EditorId): Record {

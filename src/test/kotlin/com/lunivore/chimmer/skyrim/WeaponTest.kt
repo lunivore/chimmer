@@ -38,7 +38,7 @@ class WeaponTest {
         // (The 02 index should make the value be our
         val masters = listOf("Skyrim.esm", "Miscellaneous.esp")
 
-        // When we parse it
+        // When we parseAll it
         val weapon = Weapon(RecordParser().parseAll(MastersWithOrigin("MyMod.esp",masters),
                 Hex.IRON_SWORD_WEAPON.fromHexStringToByteList()).parsed[0])
 

@@ -1,7 +1,9 @@
 package com.lunivore.chimmer.skyrim
 
 import com.lunivore.chimmer.FormId
-import com.lunivore.chimmer.binary.*
+import com.lunivore.chimmer.binary.ByteSub
+import com.lunivore.chimmer.binary.Record
+import com.lunivore.chimmer.binary.toLittleEndianByteList
 import com.lunivore.chimmer.helpers.EditorId
 import com.lunivore.chimmer.helpers.Masters
 import com.lunivore.chimmer.helpers.OriginMod

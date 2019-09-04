@@ -1,7 +1,6 @@
 package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.helpers.MastersWithOrigin
-import java.lang.IllegalArgumentException
 
 typealias SubrecordProvider = (MastersWithOrigin, List<Byte>) -> Subrecord
 

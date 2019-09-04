@@ -19,7 +19,7 @@ class RecordParser(val menu : SubrecordMenu = SkyrimSubrecordMenu()) {
         val temporaryOriginWithEmptyMasters = MastersWithOrigin(originMod.value, listOf())
         val (headerBytes, recordBytes, rest) = parseDataForType(temporaryOriginWithEmptyMasters, "TES4", bytes)
 
-        val subrecordsResult = Subrecord.parse(menu, "TES4", temporaryOriginWithEmptyMasters, recordBytes)
+        val subrecordsResult = Subrecord.parseAll(menu, "TES4", temporaryOriginWithEmptyMasters, recordBytes)
         if (subrecordsResult.failed) throw IllegalStateException(createErrorMessage("TES4", bytes, originMod))
 
         val masters = Masters(findMastersForTes4HeaderRecordOnly(subrecordsResult.parsed))

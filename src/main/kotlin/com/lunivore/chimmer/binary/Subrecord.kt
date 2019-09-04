@@ -18,13 +18,13 @@ interface Subrecord {
         @JvmStatic
         val logger = LogManager.getLogger(Subrecord::class.java)
 
-        fun parse(menu: SubrecordMenu, recordType: String, mastersWithOrigin: MastersWithOrigin, bytes: List<Byte>): ParseResult<List<Subrecord>> {
+        fun parseAll(menu: SubrecordMenu, recordType: String, mastersWithOrigin: MastersWithOrigin, bytes: List<Byte>): ParseResult<List<Subrecord>> {
             var rest = bytes
             val subrecords = mutableListOf<Subrecord>()
 
             // All subrecords have a 4-letter code, followed by a short (2 bytes) showing their length.
             // If we don't have at least 6 bytes, we're done.
-            if (rest.size < 6) return ParseResult(listOf(), listOf(), "Failed to parse subrecord") // TODO Should this be throwing an exception?
+            if (rest.size < 6) return ParseResult(listOf(), listOf(), "Failed to parseAll subrecord") // TODO Should this be throwing an exception?
 
             while (rest.size > 5) {
                 val type = String(rest.subList(0, 4).toByteArray())
@@ -32,7 +32,7 @@ interface Subrecord {
 
                 logger.debug("Subrecord $type, length $length")
 
-                if (rest.size < 6 + length) return ParseResult(listOf(), listOf(), "Failed to parse subrecord of type $type") // TODO Ditto
+                if (rest.size < 6 + length) return ParseResult(listOf(), listOf(), "Failed to parseAll subrecord of type $type") // TODO Ditto
 
                 subrecords.add(menu.findProvider(recordType, type)(mastersWithOrigin, rest.subList(6, 6 + length)))
                 rest = if (rest.size <= 6 + length) listOf() else rest.subList(6 + length, rest.size)

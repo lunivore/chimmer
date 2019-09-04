@@ -15,7 +15,7 @@ class GrupTest {
         // Given some groups, some of which we're interested in
         val hex = Hex.IRON_SWORD_WEAPON_GROUP + Hex.UNINTERESTING_COLOUR_GROUP
 
-        // When we parse the group
+        // When we parseAll the group
         val grups = Grup.parseAll(MastersWithOrigin("Wibble.esp", listOf("Skyrim.esm")), hex.fromHexStringToByteList())
 
         // Then we should be able to get the top-level records from it

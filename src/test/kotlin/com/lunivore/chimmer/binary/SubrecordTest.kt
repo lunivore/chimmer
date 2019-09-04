@@ -19,10 +19,10 @@ class SubrecordTest {
         val rest = "FF EE DD CC"
 
         // When we render a subrecord from the bytes
-        val parseResult = Subrecord.parse(SkyrimSubrecordMenu(), "WEAP", MastersWithOrigin("Skyrim.esm", listOf()), (field + rest).fromHexStringToByteList())
+        val parseResult = Subrecord.parseAll(SkyrimSubrecordMenu(), "WEAP", MastersWithOrigin("Skyrim.esm", listOf()), (field + rest).fromHexStringToByteList())
         val subrecord = parseResult.parsed[0]
 
-        // Then it should read the type from the first four digits and parse the length appropriately
+        // Then it should read the type from the first four digits and parseAll the length appropriately
         assertEquals("EDID", subrecord.type)
         assertEquals("49 72 6F 6E 53 77 6F 72 64 00", parseResult.parsed[0].asBytes().toByteArray().toReadableHexString())
 
@@ -37,9 +37,9 @@ class SubrecordTest {
         val field = "45 44 49 44 0A 00 49 72 6F 6E 53 72 64 00"
 
         // When we render a subrecord from the bytes
-        val parseResult = Subrecord.parse(SkyrimSubrecordMenu(), "WEAP",  MastersWithOrigin("Skyrim.esm", listOf()), field.fromHexStringToByteList())
+        val parseResult = Subrecord.parseAll(SkyrimSubrecordMenu(), "WEAP",  MastersWithOrigin("Skyrim.esm", listOf()), field.fromHexStringToByteList())
 
-        // Then the parse result should be a failure
+        // Then the parseAll result should be a failure
         assertEquals(false, parseResult.succeeded)
     }
 }

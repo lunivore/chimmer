@@ -24,7 +24,7 @@ class RecordParserTest {
         // Given a mod which contains an iron sword
         val binary = (Hex.CHIMMER_MOD_HEADER + Hex.IRON_SWORD_WEAPON_GROUP).replace(" ", "")
 
-        // When we parse the record header from it
+        // When we parseAll the record header from it
         val result = RecordParser(menu).parseTes4(OriginMod("Wibble.esp"), binary.fromHexStringToByteList())
 
         // Then we should get back one record  with all the relevant subrecords in
@@ -61,7 +61,7 @@ class RecordParserTest {
     @Test
     fun `should return empty grups (CLDC, HAIR, RGDL, SCPT, SCOL, PWAT) without any trouble`() {
         // Given an empty grup (so no bytes)
-        // When we parse it
+        // When we parseAll it
 
         val result = RecordParser(menu).parseAll(MastersWithOrigin("Wibble.esp", listOf("Skyrim.esm")), listOf())
 
@@ -75,7 +75,7 @@ class RecordParserTest {
         val goodHex = Hex.IRON_SWORD_WEAPON
         val badHex = goodHex.substring(0, goodHex.length - 3)
 
-        // When we parse it
+        // When we parseAll it
         try {
             RecordParser(menu).parseAll(MastersWithOrigin("Wibble.esp", listOf("Skyrim.esm")), badHex.fromHexStringToByteList())
             Assert.fail()
@@ -162,24 +162,6 @@ class RecordParserTest {
 
         // Then it should be a copy but with the template added.
         Assert.assertEquals(template, changedRecord.find("CNAM")?.asBytes())
-    }
-
-    @Test
-    fun `should convert its own FormId for a new masterlist`() {
-        // Given a record containing an iron sword
-        val hex = Hex.IRON_SWORD_WEAPON
-        val record = RecordParser(menu).parseAll(MastersWithOrigin("Wibble.esp", listOf("Skyrim.esm")), hex.fromHexStringToByteList()).parsed[0]
-
-        // When we ask it to render with a new list of value
-        val byteArray = ByteArrayOutputStream()
-        record.render(MastersWithOrigin("Wibble.esp", listOf("Whatever.esm", "Skyrim.esm")), ::fakeConsistencyRecorder) {byteArray.write(it)}
-
-        // Then it should render its form id with a new index to represent its place in that masterlist
-        val renderedHex = byteArray.toByteArray()
-
-        val newRecord = RecordParser(menu).parseAll(MastersWithOrigin("Wibble.esp", listOf("Skyrim.esm")), renderedHex.toList()).parsed[0]
-        Assert.assertEquals(ExistingFormId.create(MastersWithOrigin("Wibble.esp", listOf("Skyrim.esm")), IndexedFormId(0x01000000u or (record.formId as ExistingFormId).unindexed)),
-                newRecord.formId)
     }
 
     @Test

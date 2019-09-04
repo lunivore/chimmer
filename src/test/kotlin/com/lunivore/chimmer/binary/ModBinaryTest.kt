@@ -27,7 +27,7 @@ class ModBinaryTest {
         val binary = (Hex.CHIMMER_MOD_HEADER + Hex.IRON_SWORD_WEAPON_GROUP).replace(" ", "")
         val modBytes = DatatypeConverter.parseHexBinary(binary)
 
-        // When we parse a ModBinary from it
+        // When we parseAll a ModBinary from it
         val modBinary = ModBinary.parse(OriginMod("Wibble.esp"), modBytes)
 
         // Then it should have a header with the correct author

@@ -118,5 +118,6 @@ class LoadingAndSavingMods  : ChimmerScenario() {
 
         // Then we should be able to see those records too
         assertEquals("00000EB4", (mods[0].npcs[0].formId as ExistingFormId).unindexed.toBigEndianHexString())
+        assertEquals("dunTransmogrifyDremora", mods[0].npcs[0].editorId)
     }
 }
