@@ -66,7 +66,7 @@ class SynchronizingFormIdsAndMasterFiles()  : ChimmerScenario() {
         chimmer.save(mergedMod)
 
         // Then the hex representing the two form ids should have the index of the appropriate value
-        val mergedModBinary = ModBinary.parse(OriginMod(mergedModName), File(outputFolder.root, mergedModName).readBytes())
+        val mergedModBinary = ModBinary.parse(OriginMod(mergedModName), File(outputFolder.root, mergedModName).readBytes(), Group.All)
 
         val weaps = mergedModBinary.grups[0]
         val formIds = weaps.map { it.formId }

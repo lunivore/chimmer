@@ -13,7 +13,7 @@ class ExistingFormIdTest {
     @Test
     fun `should identify master from a list based on the form id index`() {
         // Given a rawFormId with an index of 01 and a masterlist of Skyrim, Dawnguard, and another
-        val formId = ExistingFormId.create(MastersWithOrigin("ANOther.esp", "Skyrim.esm, Dawnguard.esm, ANOther.esp".split(", ")), IndexedFormId(0x01abababu))
+        val formId = ExistingFormId.create(MastersWithOrigin("ANOther.esp", "Skyrim.esm, Dawnguard.esm".split(", ")), IndexedFormId(0x01abababu))
 
         // When we ask it for its master
         // Then it should correctly identify as Dawnguard
@@ -110,10 +110,8 @@ class ExistingFormIdTest {
         assertEquals("Skyrim.esm", iDaysToRespawnVendor.master)
 
         // When we reindex it with Skyrim in first place for a new mod (Skyrim will always be in first place)
-        val newMasters = listOf("Skyrim.esm", "MyMod.esp")
-
         // Then it should have its formId reindexed to 0
-        assertEquals("Skyrim.esm", ExistingFormId.create(MastersWithOrigin("Skyrim.esm", newMasters), IndexedFormId(0x0023C00Eu)).master)
+        assertEquals("Skyrim.esm", ExistingFormId.create(MastersWithOrigin("Skyrim.esm", listOf("MyMod.esp")), IndexedFormId(0x0023C00Eu)).master)
     }
 }
 

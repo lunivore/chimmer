@@ -1,6 +1,7 @@
 package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.FormId
+import com.lunivore.chimmer.Group
 import com.lunivore.chimmer.helpers.*
 import com.lunivore.chimmer.skyrim.SkyrimObject
 import com.lunivore.chimmer.testheplers.Hex
@@ -28,7 +29,7 @@ class ModBinaryTest {
         val modBytes = DatatypeConverter.parseHexBinary(binary)
 
         // When we parseAll a ModBinary from it
-        val modBinary = ModBinary.parse(OriginMod("Wibble.esp"), modBytes)
+        val modBinary = ModBinary.parse(OriginMod("Wibble.esp"), modBytes, Group.All)
 
         // Then it should have a header with the correct author
         assertEquals("Chimmer", modBinary.header.find("CNAM")?.asString())
@@ -47,7 +48,7 @@ class ModBinaryTest {
         // Given a mod which contains an iron sword
         val binary = (Hex.CHIMMER_MOD_HEADER + Hex.IRON_SWORD_WEAPON_GROUP).replace(" ", "")
         val modBytes = DatatypeConverter.parseHexBinary(binary)
-        val modBinary = ModBinary.parse(OriginMod("Wibble.esp"), modBytes)
+        val modBinary = ModBinary.parse(OriginMod("Wibble.esp"), modBytes, Group.All)
 
         // When we ask it to replace the weapons with a Dawnguard crossbow
         val crossbowRecord = RecordParser().parseAll(MastersWithOrigin("Wibble.esp", listOf("Dawnguard.esm")), Hex.CROSSBOW_WEAPON.fromHexStringToByteList()).parsed[0]
@@ -99,7 +100,7 @@ class ModBinaryTest {
         // Given a mod which contains an iron sword
         val binary = (Hex.CHIMMER_MOD_HEADER + Hex.IRON_SWORD_WEAPON_GROUP).replace(" ", "")
         val modBytes = DatatypeConverter.parseHexBinary(binary)
-        val modBinary = ModBinary.parse(OriginMod("Wibble.esp"), modBytes)
+        val modBinary = ModBinary.parse(OriginMod("Wibble.esp"), modBytes, Group.All)
 
         // Then we should be able to get the weapons group
         assertEquals("WEAP", modBinary.find("WEAP")?.type)
@@ -113,7 +114,7 @@ class ModBinaryTest {
         // Given a new mod, copying an iron sword as a new record
         val binary = (Hex.CHIMMER_MOD_HEADER + Hex.IRON_SWORD_WEAPON_GROUP).replace(" ", "")
         val modBytes = DatatypeConverter.parseHexBinary(binary)
-        val ironSwordModBinary = ModBinary.parse(OriginMod("Whatever.esp"), modBytes) // Name doesn't matter as Iron Sword still
+        val ironSwordModBinary = ModBinary.parse(OriginMod("Whatever.esp"), modBytes, Group.All) // Name doesn't matter as Iron Sword still
                                                                            // has Skyrim as a master right now
 
         val ironSwordAsNew = ironSwordModBinary.grups[0].records[0].copyAsNew(OriginMod("MyFirstMod.esp"), EditorId("MyNewMod_IronSword"))
@@ -127,7 +128,7 @@ class ModBinaryTest {
         firstNewModBinary.render(LoadOrder(listOf("Skyrim.esm", "MyFirstMod.esp")), { unindexedKeywordforNewSwordConsistency }) {firstBytes.write(it)}
 
         // Then reloaded, and the iron sword copied to another mod (taking its master from whatever it's loaded from)
-        val originalFirstBinary = ModBinary.parse(OriginMod("MyFirstMod.esp"), firstBytes.toByteArray())
+        val originalFirstBinary = ModBinary.parse(OriginMod("MyFirstMod.esp"), firstBytes.toByteArray(), Group.All)
         val secondNewModBinary = ModBinary.create("MySecondMod.esp").copy(grups = listOf(originalFirstBinary.grups[0].copy(
                 records = listOf(originalFirstBinary.grups[0].records[0]) // Note not copying this as new
         )))
@@ -142,7 +143,7 @@ class ModBinaryTest {
             {secondBytes.write(it)}
 
         // Then the TES4 header should have been rendered out with the appropriate values
-        val reloadedMod = ModBinary.parse(OriginMod("MySecondMod.esp"), secondBytes.toByteArray())
+        val reloadedMod = ModBinary.parse(OriginMod("MySecondMod.esp"), secondBytes.toByteArray(), Group.All)
         assertEquals(listOf("Skyrim.esm", "MyFirstMod.esp"), reloadedMod.header.masters)
 
         // (including the new "origin" of the new Iron Sword.

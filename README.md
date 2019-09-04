@@ -5,15 +5,14 @@ Chimmer lets you change your mods easily! It will:
 - load a list of mods
 - in the order you specify (via a list, a multi-line string, or a file like plugins.txt)
 - using your Steam Skyrim directory and plugins.txt as a default
-- **TODO** - filtered if you want to
-- **TODO** - including compressed records like NPCs
+- filtered if you want to
+- including compressed records like NPCs
 - allowing you to merge mods into one
 - and programmatically manipulate a mod
 - and create new records
-- and use those new records in other records
+- allowing new records to reference other new records with an editorId
 - **TODO** - or mark records as deleted
 - retaining consistency with previous patch runs via a consistency file a la SkyProc
-- allowing new records to reference other new records with an editorId
 - while keeping it all in sync with any changes to the master list
 - including any FormIds used internally to records
 - and save it to a new mod.

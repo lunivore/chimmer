@@ -25,6 +25,26 @@ class LoadingAndSavingMods  : ChimmerScenario() {
     }
 
     @Test
+    fun `should be able to filter on particular groups`() {
+
+        // Given several mods, some of which have weapons
+        val plugins = listOf("IronSword.esp", "ArmorBootsSwordCrossbow.esp", "CompressedDunTransmogrifyDremora.esp")
+        val modDirectory = asResourceFile("plugins.txt").parentFile
+        val chimmer = Chimmer(fileHandler())
+
+        // When we load them using the order provided
+        val mods = Chimmer(fileHandler()).load(modDirectory, plugins, ModsToLoad.LOAD_ALL, listOf(Group.Weapon))
+
+        // Then we should have only the ones with weapons
+        assertEquals(2, mods.size)
+        assertEquals(listOf("IronSword.esp", "ArmorBootsSwordCrossbow.esp"), mods.map { it.name })
+
+        // And only the weapons should have been loaded
+        assertEquals(2, mods[1].weapons.size)
+        assertEquals(0, mods[1].armors.size)
+    }
+
+    @Test
     fun `should be able to load them as determined by the load order`() {
 
         // Given we provide the load order with the iron sword first

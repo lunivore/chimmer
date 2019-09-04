@@ -1,5 +1,6 @@
 package com.lunivore.chimmer.binary
 
+import com.lunivore.chimmer.Group
 import com.lunivore.chimmer.helpers.MastersWithOrigin
 import com.lunivore.chimmer.testheplers.Hex
 import com.lunivore.chimmer.testheplers.fakeConsistencyRecorder
@@ -16,7 +17,7 @@ class GrupTest {
         val hex = Hex.IRON_SWORD_WEAPON_GROUP + Hex.UNINTERESTING_COLOUR_GROUP
 
         // When we parseAll the group
-        val grups = Grup.parseAll(MastersWithOrigin("Wibble.esp", listOf("Skyrim.esm")), hex.fromHexStringToByteList())
+        val grups = Grup.parseAll(MastersWithOrigin("Wibble.esp", listOf("Skyrim.esm")), hex.fromHexStringToByteList(), Group.All)
 
         // Then we should be able to get the top-level records from it
         val weaponGrup = grups.first()

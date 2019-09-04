@@ -2,11 +2,12 @@ package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.ConsistencyRecorder
 import com.lunivore.chimmer.FormId
-import com.lunivore.chimmer.binary.ModBinary.Companion.GRUP_ORDER
+import com.lunivore.chimmer.Group
 import com.lunivore.chimmer.helpers.FormIdComparator
 import com.lunivore.chimmer.helpers.LoadOrder
 import com.lunivore.chimmer.helpers.MastersWithOrigin
 import com.lunivore.chimmer.helpers.OriginMod
+import com.lunivore.chimmer.matches
 
 
 // TODO: Recalculate next available object id (highest + 1024), number of records and groups, and the masterlist.
@@ -14,23 +15,6 @@ import com.lunivore.chimmer.helpers.OriginMod
 @UseExperimental(ExperimentalUnsignedTypes::class)
 data class ModBinary(val originMod: OriginMod, val header: Record, val grups: List<Grup>) : List<Grup> by grups {
     companion object {
-        internal val GRUP_ORDER = fromCommaDelimitedToList("""
-            GMST, KYWD, LCRT, AACT, TXST, GLOB, CLAS, FACT,
-            HDPT, HAIR, EYES, RACE, SOUN, ASPC, MGEF, SCPT,
-            LTEX, ENCH, SPEL, SCRL, ACTI, TACT, ARMO, BOOK,
-            CONT, DOOR, INGR, LIGH, MISC, APPA, STAT, SCOL,
-            MSTT, PWAT, GRAS, TREE, CLDC, FLOR, FURN, WEAP,
-            AMMO, NPC_, LVLN, KEYM, ALCH, IDLM, COBJ, PROJ,
-            HAZD, SLGM, LVLI, WTHR, CLMT, SPGD, RFCT, REGN,
-            NAVI, CELL, WRLD, DIAL, QUST, IDLE, PACK, CSTY,
-            LSCR, LVSP, ANIO, WATR, EFSH, EXPL, DEBR, IMGS,
-            IMAD, FLST, PERK, BPTD, ADDN, AVIF, CAMS, CPTH,
-            VTYP, MATT, IPCT, IPDS, ARMA, ECZN, LCTN, MESG,
-            RGDL, DOBJ, LGTM, MUSC, FSTP, FSTS, SMBN, SMQN,
-            SMEN, DLBR, MUST, DLVW, WOOP, SHOU, EQUP, RELA,
-            SCEN, ASTP, OTFT, ARTO, MATO, MOVT, HAZD, SNDR,
-            DUAL, SNCT, SOPM, COLL, CLFM, REVB
-        """)
 
         private val consistencyRecorderForTes4: ConsistencyRecorder = {
             throw IllegalStateException("TES4 records should always have form id of 0")
@@ -39,11 +23,12 @@ data class ModBinary(val originMod: OriginMod, val header: Record, val grups: Li
         private fun fromCommaDelimitedToList(grupList: String) =
                 grupList.lines().joinToString("").split(",").map {it.trim()}
 
-        fun parse(originMod: OriginMod, bytes: ByteArray): ModBinary {
+        fun parse(originMod: OriginMod, bytes: ByteArray, filter: List<Group>): ModBinary {
             val result = RecordParser().parseTes4(originMod, bytes.toList())
 
             val headerRecord = result.parsed
-            val grups = Grup.parseAll(MastersWithOrigin(originMod.value, headerRecord.masters), result.rest)
+            val grups = Grup.parseAll(MastersWithOrigin(originMod.value, headerRecord.masters), result.rest, filter)
+                    .filter { filter.matches(it.type) }
 
             return ModBinary(originMod, headerRecord, grups)
         }
@@ -80,7 +65,8 @@ data class ModBinary(val originMod: OriginMod, val header: Record, val grups: Li
                 }
             })
         } else {
-            val grupsBeforeType = GRUP_ORDER.subList(0, GRUP_ORDER.indexOf(type))
+            val grup_order = Group.All.map { it.type }
+            val grupsBeforeType = grup_order.subList(0, grup_order.indexOf(type))
             val typeList = grups.map { it.type }
             val lastGrupWeContainBeforeType = typeList.lastOrNull { grupsBeforeType.contains(it) }
             val newGrups = grups.toMutableList()
@@ -104,7 +90,7 @@ fun List<ModBinary>.merge(newModName: String, loadOrder: List<String>): ModBinar
         // ARMO1, ARMO2
         // (No KYWDS, empty list)
         // WEAP1, WEAP3, WEAP5
-        val grupsByNameFromEachMod = GRUP_ORDER.map { grupName -> this.map { it.find(grupName) }.filterNotNull() }
+        val grupsByNameFromEachMod = Group.All.map { grup -> this.map { it.find(grup.type) }.filterNotNull() }
 
         // For each record in each grup, finds the last version of it and adds it to a map by FormId.Key
         // ARMO: ArmoRec1, ArmoRec2... ArmoRec14

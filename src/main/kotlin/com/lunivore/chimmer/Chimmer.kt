@@ -32,15 +32,15 @@ class Chimmer(val configuration : FileHandler = SensibleDefaultFileHandler()) {
         return load(modsFolder, pluginsTxtFile, modsToLoad)
     }
 
-    fun load(modFolder: File, loadOrder: File, modsToLoad: ModsToLoad): List<Mod> {
+    fun load(modFolder: File, loadOrder: File, modsToLoad: ModsToLoad, filter : List<Group> = Group.All): List<Mod> {
         return load(modFolder, loadOrder.readLines(), modsToLoad)
     }
 
-    fun load(modFolder: File, loadOrderFile: File): List<Mod> {
+    fun load(modFolder: File, loadOrderFile: File, filter : List<Group> = Group.All): List<Mod> {
         return load(modFolder, loadOrderFile.readLines())
     }
 
-    fun load(modFolder: File, loadOrder: List<String>, modsToLoad: ModsToLoad = ModsToLoad.LOAD_ALL): List<Mod> {
+    fun load(modFolder: File, loadOrder: List<String>, modsToLoad: ModsToLoad = ModsToLoad.LOAD_ALL, filter : List<Group> = Group.All): List<Mod> {
         lastSeenLoadOrder = loadOrder
         if (!modFolder.exists()) {
             throw FileNotFoundException("Could not find mod folder '${modFolder.absolutePath}'")
@@ -54,9 +54,9 @@ class Chimmer(val configuration : FileHandler = SensibleDefaultFileHandler()) {
                 throw FileNotFoundException("Could not find '$it' in folder '${modFolder.absolutePath}'")
             }
             logger.info("Loading mod $it")
-            val modBinary = ModBinary.parse(OriginMod(it), matchingFiles[0].readBytes())
+            val modBinary = ModBinary.parse(OriginMod(it), matchingFiles[0].readBytes(), filter)
             Mod(it, modBinary)
-        }
+        }.filter { it.modBinary.grups.map { it.type }.any { filter.matches(it) } }
     }
 
     /**

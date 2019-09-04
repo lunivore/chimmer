@@ -1,8 +1,10 @@
 package com.lunivore.chimmer.binary
 
 import com.lunivore.chimmer.ConsistencyRecorder
+import com.lunivore.chimmer.Group
 import com.lunivore.chimmer.Logging
 import com.lunivore.chimmer.helpers.MastersWithOrigin
+import com.lunivore.chimmer.matches
 
 /**
  * See: https://en.uesp.net/wiki/Tes5Mod:Mod_File_Format#Groups
@@ -14,7 +16,7 @@ data class Grup(val type: String, val headerBytes: List<Byte>, val records: List
         val EMPTY_HEADER_BYTES = ByteArray(12).toList()
         val logger by Logging()
 
-        fun parseAll(mastersWithOrigin: MastersWithOrigin, bytes: List<Byte>): List<Grup> {
+        fun parseAll(mastersWithOrigin: MastersWithOrigin, bytes: List<Byte>, filterForBetterPerformance: List<Group>): List<Grup> {
 
             val grups = mutableListOf<Grup>()
             var rest = bytes
@@ -23,7 +25,8 @@ data class Grup(val type: String, val headerBytes: List<Byte>, val records: List
                 val grupLength = rest.subList(4, 8).toLittleEndianInt() // Note that this INCLUDES the group header (24 bytes)
                 val type = String(rest.subList(8, 12).toByteArray())
                 val grupHeaderBytes = rest.subList(12, 24)
-                val recordBytes = rest.subList(24, grupLength)
+
+                val recordBytes = if(filterForBetterPerformance.matches(type)) rest.subList(24, grupLength) else listOf()
 
                 rest = if (rest.size >= grupLength) rest.subList(grupLength, rest.size) else listOf()
 
