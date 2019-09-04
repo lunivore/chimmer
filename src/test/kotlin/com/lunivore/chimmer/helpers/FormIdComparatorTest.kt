@@ -16,7 +16,7 @@ class FormIdComparatorTest {
         // And formIds originating from different mods
         val formIds = listOf(
                 ExistingFormId.create(MastersWithOrigin("Skyrim.esm", listOf()), IndexedFormId(0x00aaaaaau)),
-                ExistingFormId.create(MastersWithOrigin("Dawnguard.esm", listOf("Skyrim.esm","Dawnguard.esm")), IndexedFormId(0x01ccccccu)),
+                ExistingFormId.create(MastersWithOrigin("Dawnguard.esm", listOf("Skyrim.esm")), IndexedFormId(0x01ccccccu)),
                 ExistingFormId.create(MastersWithOrigin("MyMod1.esp", listOf("Skyrim.esm","Dawnguard.esm")), IndexedFormId(0x01bbbbbbu)),
                 ExistingFormId.create(MastersWithOrigin("MyMod2.esp", listOf("Skyrim.esm", "Dawnguard.esm", "MyMod1.esp")), IndexedFormId(0x02eeeeeeu)),
                 ExistingFormId.create(MastersWithOrigin("MyMod2.esp", listOf("Skyrim.esm", "Dawnguard.esm", "MyMod1.esp")), IndexedFormId(0x01ddddddu)),

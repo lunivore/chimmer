@@ -73,18 +73,30 @@ class WeaponTest {
                 masters), Hex.CROSSBOW_WEAPON.fromHexStringToByteList()).parsed[0])
 
         // When we change certain values of the iron sword
+        val enchantment = FormId.createNew(OriginMod("AnotherMod.esp"), EditorId("MyEnchantment"))
         val newSword = sword
                 .withTemplate(crossbow.formId)
                 .withDamage((sword.damage * 2u).toUShort())
                 .withReach(sword.reach * 1.5f)
                 .withSpeed(sword.speed * 3.0f)
                 .withFlags(Weapon.Flags.CANT_DROP)
+                .withEnchantment(enchantment)
+                .withValue(50u)
+                .withWeight(3.8f)
 
         // Then the changes should be consistent
         assertEquals((crossbow.formId as ExistingFormId).unindexed.toBigEndianHexString(), (newSword.template as ExistingFormId).unindexed.toBigEndianHexString())
 
-        // And we should be able to view things that would normally be read-only
+        // And we should be able to view things too
         assertEquals(Weapon.WeaponType.ONE_HAND_SWORD, newSword.weaponType)
+        assertEquals(crossbow.formId, newSword.template)
+        assertEquals((sword.damage * 2u).toUShort(), newSword.damage)
+        assertEquals(sword.reach * 1.5f, newSword.reach)
+        assertEquals(sword.speed * 3.0f, newSword.speed)
+        assertEquals(Weapon.Flags.CANT_DROP, newSword.flags)
+        assertEquals(enchantment, newSword.enchantment)
+        assertEquals(50u, newSword.value)
+        assertEquals(3.8f, newSword.weight)
     }
 
 

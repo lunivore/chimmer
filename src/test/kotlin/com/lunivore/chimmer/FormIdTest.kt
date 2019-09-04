@@ -111,7 +111,7 @@ class ExistingFormIdTest {
 
         // When we reindex it with Skyrim in first place for a new mod (Skyrim will always be in first place)
         // Then it should have its formId reindexed to 0
-        assertEquals("Skyrim.esm", ExistingFormId.create(MastersWithOrigin("Skyrim.esm", listOf("MyMod.esp")), IndexedFormId(0x0023C00Eu)).master)
+        assertEquals("Skyrim.esm", ExistingFormId.create(MastersWithOrigin("ANewMod.esp", listOf("Skyrim.esm", "MyMod.esp")), IndexedFormId(0x0023C00Eu)).master)
     }
 }
 
