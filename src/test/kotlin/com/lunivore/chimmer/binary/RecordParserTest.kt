@@ -32,7 +32,7 @@ class RecordParserTest {
         Assert.assertEquals("HEDR, CNAM, MAST, DATA".split(", "), record.subrecords.map { it.type })
 
         // And the records should have the correct data
-        Assert.assertEquals("Chimmer", record.find("CNAM")?.asString())
+        Assert.assertEquals("Chimmer", (record.find("CNAM") as ByteSub).asString())
 
         // And the rest of the data should also be passed back in the result.
         val expectedHex = Hex.IRON_SWORD_WEAPON_GROUP
@@ -147,7 +147,7 @@ class RecordParserTest {
         val changedRecord = record.with(ByteSub.create("EDID", "MY_MOD_Editor_Id_123456\u0000".toByteList()))
 
         // Then it should be a copy but with the new EDID field.
-        Assert.assertEquals("MY_MOD_Editor_Id_123456", changedRecord.find("EDID")?.asString())
+        Assert.assertEquals("MY_MOD_Editor_Id_123456", (changedRecord.find("EDID") as ByteSub).asString())
     }
 
     @Test
@@ -161,7 +161,7 @@ class RecordParserTest {
         val changedRecord = record.with(ByteSub.create("CNAM", template))
 
         // Then it should be a copy but with the template added.
-        Assert.assertEquals(template, changedRecord.find("CNAM")?.asBytes())
+        Assert.assertEquals(template, (changedRecord.find("CNAM") as ByteSub).asBytes())
     }
 
     @Test

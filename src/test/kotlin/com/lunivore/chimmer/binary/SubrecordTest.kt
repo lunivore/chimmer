@@ -24,7 +24,7 @@ class SubrecordTest {
 
         // Then it should read the type from the first four digits and parseAll the length appropriately
         assertEquals("EDID", subrecord.type)
-        assertEquals("49 72 6F 6E 53 77 6F 72 64 00", parseResult.parsed[0].asBytes().toByteArray().toReadableHexString())
+        assertEquals("49 72 6F 6E 53 77 6F 72 64 00", (parseResult.parsed[0] as ByteSub).asBytes().toReadableHexString())
 
         // And it should give us back the rest
         Assert.assertEquals(rest, parseResult.rest.toByteArray().toReadableHexString())

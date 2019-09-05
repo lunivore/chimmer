@@ -3,7 +3,6 @@ package com.lunivore.chimmer.skyrim
 import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.binary.*
 import com.lunivore.chimmer.helpers.Masters
-import com.lunivore.chimmer.helpers.MastersWithOrigin
 
 @UseExperimental(ExperimentalUnsignedTypes::class)
 data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
@@ -22,6 +21,18 @@ data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
         }
     }
 
+    companion object {
+        data class StructLookup(val sub : String, val start: Int, val end: Int)
+
+        private val VALUE = StructLookup("DATA", 0x0, 0x4)
+        private val WEIGHT = StructLookup("DATA", 0x04, 0x08)
+        private val DAMAGE = StructLookup("DATA", 0x08, 0x0A)
+
+        private val SPEED = StructLookup("DNAM", 0x04, 0x08)
+        private val REACH = StructLookup("DNAM", 0x08, 0x0C)
+        private val FLAGS = StructLookup("DNAM", 0x0C, 0x0E)
+    }
+
     enum class WeaponType(val type: Int) {
         OTHER(0), // Used by unarmed, weapon versions of knife and fork, and unpatched Woodcutter's Axe
         ONE_HAND_SWORD(1),
@@ -32,49 +43,36 @@ data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
         TWO_HAND_AXE(6),
         BOW(7),
         STAFF(8),
-        CROSSBOW(9)
+        CROSSBOW(9);
+
+        companion object {
+            fun lookup(index: Int): WeaponType = values()[index]
+        }
     }
 
     override fun create(newRecord: Record): Weapon = Weapon(newRecord)
 
-    val flags: UShort
-            get() = record.find("DNAM")?.asBytes()?.subList(0x0C, 0x0E)?.toLittleEndianUShort() ?: throw IllegalStateException("No DNAM found in weapon ${formId.asDebug()}")
-    val weaponType: WeaponType
-            get() = WeaponType.values()[record.find("DNAM")?.asBytes()?.subList(0, 1)?.toLittleEndianInt() ?: throw IllegalStateException("No DNAM found in weapon ${formId.asDebug()}")]
-    val template: FormId?
-            get() = record.find("CNAM")?.asFormId(MastersWithOrigin(record.formId.originMod, record.masters))
+    val damage : UShort get() = (record.find(DAMAGE.sub) as StructSub).toUShort(DAMAGE.start, DAMAGE.end)
+    val weight : Float get() = (record.find(WEIGHT.sub) as StructSub).toFloat(WEIGHT.start, WEIGHT.end)
+    val value: UInt get() = (record.find(VALUE.sub) as StructSub).toUInt(VALUE.start, VALUE.end)
 
-    val damage : UShort
-            get() = record.find("DATA")?.asBytes()?.subList(0x08, 0x0A)?.toLittleEndianUShort() ?: throw IllegalStateException("No DATA found in weapon ${formId.asDebug()}")
 
-    val weight : Float
-            get() = record.find("DATA")?.asBytes()?.subList(0x04, 0x08)?.toLittleEndianFloat() ?: throw IllegalStateException("No DATA found in weapon ${formId.asDebug()}")
+    val weaponType: WeaponType = WeaponType.lookup((record.find("DNAM") as StructSub).toInt(0, 1))
+    val flags: UShort get() = (record.find(FLAGS.sub) as StructSub).toUShort(FLAGS.start, FLAGS.end)
+    val reach: Float get() = (record.find(REACH.sub) as StructSub).toFloat(REACH.start, REACH.end)
+    val speed: Float get() = (record.find(SPEED.sub) as StructSub).toFloat(SPEED.start, SPEED.end)
 
-    val value : UInt
-            get() = record.find("DATA")?.asBytes()?.subList(0x0, 0x04)?.toLittleEndianUInt() ?: throw IllegalStateException("No DATA found in weapon ${formId.asDebug()}")
+    val template: FormId? get() = (record.find("CNAM") as FormIdSub?)?.asFormId()
 
-    val reach: Float
-            get() = record.find("DNAM")?.asBytes()?.subList(0x08, 0x0C)?.toLittleEndianFloat() ?: throw IllegalStateException("No DNAM found in weapon ${formId.asDebug()}")
-    val speed: Float
-            get() = record.find("DNAM")?.asBytes()?.subList(0x04, 0x08)?.toLittleEndianFloat() ?: throw IllegalStateException("No DNAM found in weapon ${formId.asDebug()}")
+    val keywords: List<FormId> get() = (record.find("KWDA") as KsizKwdaSub?)?.keywords ?: listOf()
 
-    val keywords: List<FormId>
-            get() = (record.find("KWDA") as KsizKwdaSub?)?.keywords ?: listOf()
+    val criticalDamage: Int get() = (record.find("CRDT") as CrdtSub?)?.critDamage?.toInt() ?: 0
+    val criticalMultiplier: Float get() = (record.find("CRDT") as CrdtSub?)?.critMultiplier ?: 0.0f
+    val criticalSpellEffect: FormId get() = (record.find("CRDT") as CrdtSub?)?.critSpellEffect ?: FormId.NULL_REFERENCE
 
-    val criticalDamage: Int
-            get() = (record.find("CRDT") as CrdtSub?)?.critDamage?.toInt() ?: 0
-    val criticalMultiplier: Float
-            get() = (record.find("CRDT") as CrdtSub?)?.critMultiplier ?: 0.0f
-    val criticalSpellEffect: FormId
-            get() = (record.find("CRDT") as CrdtSub?)?.critSpellEffect ?: FormId.NULL_REFERENCE
+    val enchantment: FormId? get() = (record.find("EITM") as FormIdSub?)?.asFormId()
 
-    val enchantment: FormId?
-        get() = (record.find("EITM") as FormIdSub)?.asFormId(MastersWithOrigin(record.formId.originMod, record.masters))
-
-    val editorId: String
-        get() {
-            return record.find("EDID")?.asString() ?: ""
-        }
+    val editorId: String get() = (record.find("EDID") as ByteSub?)?.asString() ?: ""
 
     fun plusKeyword(keywordToAdd: FormId): Weapon { return withKeywords(keywords.plus(keywordToAdd)) }
 
@@ -89,39 +87,33 @@ data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
     }
 
     fun withValue(gold: UInt): Weapon {
-        val data = record.find("DATA")?.asBytes() ?: throw IllegalStateException("No DATA found in weapon ${formId.asDebug()}")
-        val newData = gold.toLittleEndianByteList().plus(data.subList(0x04, 0x0A))
-        return create(record.with(ByteSub.create("DATA", newData)))
+        val data = (record.find(VALUE.sub) as StructSub).with(VALUE.start, VALUE.end, gold)
+        return create(record.with(StructSub.create(VALUE.sub, data)))
     }
 
-    fun withWeight(weight: Float): Weapon {
-        val data = record.find("DATA")?.asBytes() ?: throw IllegalStateException("No DATA found in weapon ${formId.asDebug()}")
-        val newData = data.subList(0, 0x04).plus(weight.toLittleEndianByteList()).plus(data.subList(0x08, 0x0A))
-        return create(record.with(ByteSub.create("DATA", newData)))
+    fun withWeight(newWeight: Float): Weapon {
+        val data = (record.find(WEIGHT.sub) as StructSub).with(WEIGHT.start, WEIGHT.end, newWeight)
+        return create(record.with(StructSub.create(WEIGHT.sub, data)))
     }
 
-    fun withDamage(damage: UShort): Weapon {
-        val data = record.find("DATA")?.asBytes() ?: throw IllegalStateException("No DATA found in weapon ${formId.asDebug()}")
-        val newData = data.subList(0, 0x08).plus(damage.toLittleEndianByteList())
-        return create(record.with(ByteSub.create("DATA", newData)))
+    fun withDamage(newDamage: UShort): Weapon {
+        val data = (record.find(DAMAGE.sub) as StructSub).with(DAMAGE.start, DAMAGE.end, newDamage)
+        return create(record.with(StructSub.create(DAMAGE.sub, data)))
     }
 
-    fun withReach(reach: Float): Weapon {
-        val dnam = record.find("DNAM")?.asBytes() ?: throw IllegalStateException("No DNAM found in weapon ${formId.asDebug()}")
-        val newDnam = dnam.subList(0, 0x08).plus(reach.toLittleEndianByteList()).plus(dnam.subList(0x0C, 0x64))
-        return create(record.with(ByteSub.create("DNAM", newDnam)))
+    fun withReach(newReach: Float): Weapon {
+        val data = (record.find(REACH.sub) as StructSub).with(REACH.start, REACH.end, newReach)
+        return create(record.with(StructSub.create(REACH.sub, data)))
     }
 
-    fun withSpeed(speed: Float): Weapon {
-        val dnam = record.find("DNAM")?.asBytes() ?: throw IllegalStateException("No DNAM found in weapon ${formId.asDebug()}")
-        val newDnam = dnam.subList(0, 0x04).plus(speed.toLittleEndianByteList()).plus(dnam.subList(0x08, 0x64))
-        return create(record.with(ByteSub.create("DNAM", newDnam)))
+    fun withSpeed(newSpeed: Float): Weapon {
+        val data = (record.find(SPEED.sub) as StructSub).with(SPEED.start, SPEED.end, newSpeed)
+        return create(record.with(StructSub.create(SPEED.sub, data)))
     }
 
-    fun withFlags(flags: UShort): Weapon {
-        val dnam = record.find("DNAM")?.asBytes() ?: throw IllegalStateException("No DNAM found in weapon ${formId.asDebug()}")
-        val newDnam = dnam.subList(0, 0x0C).plus(flags.toLittleEndianByteList()).plus(dnam.subList(0x0E, 0x64))
-        return create(record.with(ByteSub.create("DNAM", newDnam)))
+    fun withFlags(newFlags: UShort): Weapon {
+        val data = (record.find(FLAGS.sub) as StructSub).with(FLAGS.start, FLAGS.end, newFlags)
+        return create(record.with(StructSub.create(FLAGS.sub, data)))
     }
 
     fun withCriticalDamage(criticalDamage: Int): Weapon {

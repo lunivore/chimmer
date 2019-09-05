@@ -102,7 +102,7 @@ fun List<ModBinary>.merge(newModName: String, loadOrder: List<String>): ModBinar
                     try {
                         mapOfRecordsByFormIdKey.putIfAbsent(it.formId.key, it)
                     } catch (e: Exception) {
-                        throw Exception("Error merging record=${it.formId.asDebug()} with EDID=${it.find("EDID")?.asString()}", e)
+                        throw Exception("Error merging record=${it.formId.asDebug()} with EDID=${it.find("EDID")?.asDebug()}", e)
                     }
                 }
                 mapOfRecordsByFormIdKey

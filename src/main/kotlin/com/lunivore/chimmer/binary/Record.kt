@@ -160,7 +160,7 @@ data class Record private constructor(val type: String, val flags: UInt, val for
     }
 
     private fun getConsistentFormIdOrCreateOne(consistencyRecorder: ConsistencyRecorder, newMasters: Masters): IndexedFormId {
-        val editorId: String = find("EDID")?.asString()?.trim('\u0000')
+        val editorId: String = (find("EDID") as ByteSub?)?.asString()?.trim('\u0000')
                 ?: throw IllegalStateException("This record has no EDID subrecord and cannot be copied as new")
         val unindexedFormId = consistencyRecorder(EditorId(editorId))
 

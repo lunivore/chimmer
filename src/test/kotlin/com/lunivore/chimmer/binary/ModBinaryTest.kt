@@ -32,7 +32,7 @@ class ModBinaryTest {
         val modBinary = ModBinary.parse(OriginMod("Wibble.esp"), modBytes, Group.All)
 
         // Then it should have a header with the correct author
-        assertEquals("Chimmer", modBinary.header.find("CNAM")?.asString())
+        assertEquals("Chimmer", (modBinary.header.find("CNAM") as ByteSub).asString())
 
         // And the correct value
         assertEquals(listOf("Skyrim.esm"), modBinary.header.masters)
@@ -90,8 +90,8 @@ class ModBinaryTest {
         assertTrue(modBinary.grups.isEmpty())
 
         // And appropriate fields set in the TES4 record itself too.
-        assertEquals(1.7f, modBinary.header.find("HEDR")?.asFloat())
-        assertEquals("Chimmer", modBinary.header.find("CNAM")?.asString())
+        assertEquals(1.7f, (modBinary.header.find("HEDR") as ByteSub).asFloat())
+        assertEquals("Chimmer", (modBinary.header.find("CNAM") as ByteSub).asString())
         assertNull(modBinary.header.find("MAST"))
     }
 

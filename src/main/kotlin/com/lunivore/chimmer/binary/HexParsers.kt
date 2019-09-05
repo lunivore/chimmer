@@ -100,4 +100,4 @@ fun ByteArray.toReadableHexString(): String {
 
 fun List<Byte>.toReadableHexString() = this.toByteArray().toReadableHexString()
 
-fun Subrecord.toReadableHexString() = this.asBytes().toReadableHexString()
+fun ByteSub.toReadableHexString() = this.asBytes().toReadableHexString()

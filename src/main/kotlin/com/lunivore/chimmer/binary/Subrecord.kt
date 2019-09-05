@@ -32,7 +32,7 @@ interface Subrecord {
 
                 logger.debug("Subrecord $type, length $length")
 
-                if (rest.size < 6 + length) return ParseResult(listOf(), listOf(), "Failed to parseAll subrecord of type $type") // TODO Ditto
+                if (rest.size < 6 + length) return ParseResult(listOf(), listOf(), "Failed to parseAll subrecord of sub $type") // TODO Ditto
 
                 subrecords.add(menu.findProvider(recordType, type)(mastersWithOrigin, rest.subList(6, 6 + length)))
                 rest = if (rest.size <= 6 + length) listOf() else rest.subList(6 + length, rest.size)
@@ -43,14 +43,13 @@ interface Subrecord {
     }
 
     fun renderTo(mastersIncludingOrigin: MastersWithOrigin, consistencyRecorder: ConsistencyRecorder, renderer: (ByteArray) -> Unit)
+    fun asDebug() : String
 
-    fun asBytes(): List<Byte>
-    fun asString(): String
-    fun asFloat(): Float
-    fun asFormId(mastersWithOrigin : MastersWithOrigin): FormId?
 }
 
 data class ByteSub private constructor(override val type: String, val bytes: List<Byte>) : Subrecord{
+    override fun asDebug(): String = "${javaClass.simpleName} : $type, bytes = ${bytes.toReadableHexString()}"
+
     override val formIds: List<FormId> = listOf()
     override val containsFormIds : Boolean = false
 
@@ -60,7 +59,7 @@ data class ByteSub private constructor(override val type: String, val bytes: Lis
         }
     }
 
-    override fun asBytes() = bytes
+    fun asBytes() = bytes
 
     override fun renderTo(ignoredMasters: MastersWithOrigin, ignoredCr: ConsistencyRecorder, renderer: (ByteArray) -> Unit)
             = renderTo(renderer)
@@ -71,15 +70,15 @@ data class ByteSub private constructor(override val type: String, val bytes: Lis
         renderer(bytes.toByteArray())
     }
 
-    override fun asString(): String {
+    fun asString(): String {
         return String(bytes.toByteArray()).trimEnd('\u0000')
     }
 
-    override fun asFloat(): Float {
+    fun asFloat(): Float {
         return bytes.subList(0, 4).toLittleEndianFloat()
     }
 
-    override fun asFormId(mastersWithOrigin : MastersWithOrigin): FormId {
+    fun asFormId(mastersWithOrigin : MastersWithOrigin): FormId {
         return ExistingFormId.create(mastersWithOrigin, IndexedFormId(bytes.toLittleEndianUInt()))
     }
 
@@ -103,13 +102,9 @@ data class FormIdSub private constructor(override val type: String, val formId :
         ByteSub.create(type, formId.toBytes(mastersIncludingOrigin, consistencyRecorder)).renderTo(renderer)
     }
 
-    override fun asFormId(mastersWithOrigin : MastersWithOrigin): FormId = formId
+    fun asFormId(): FormId = formId
 
-    override fun asFloat(): Float = throw IllegalArgumentException("FormId ${asDebug()} cannot be read as a float")
-    override fun asString(): String = throw IllegalArgumentException("FormId ${asDebug()} cannot be rendered as a string. Use 'asDebug()' if you want info.")
-    override fun asBytes() : List<Byte> = throw IllegalArgumentException("FormId ${asDebug()} cannot be rendered as raw bytes without a master list")
-
-    private fun asDebug(): String = "FormIdSub{ type = $type, formId = ${formId.asDebug()}"
+    override fun asDebug(): String = "${javaClass.simpleName}{ sub = $type, formId = ${formId.asDebug()}"
 }
 
 @ExperimentalUnsignedTypes
@@ -126,10 +121,6 @@ data class CrdtSub(val critDamage : UShort, val critMultiplier: Float, val flags
                     ExistingFormId.create(mastersWithOrigin, IndexedFormId(bytes.subList(0x0C, 0x0F).toLittleEndianUInt())))
         }
     }
-    override fun asFormId(mastersWithOrigin : MastersWithOrigin): FormId = throw IllegalArgumentException("CrdtSub cannot be read as a FormId. Cast it explicitly to a CrdtSub then get the bits you need.")
-    override fun asFloat(): Float = throw IllegalArgumentException("CrdtSub cannot be read as a float")
-    override fun asString(): String = throw IllegalArgumentException("CrdtSub cannot be rendered as a string. Use 'asDebug()' if you want more info.")
-    override fun asBytes() : List<Byte> = throw IllegalArgumentException("CrdtSub cannot be rendered as raw bytes without a master list")
 
     override val type: String
         get() = "CRDT"
@@ -143,11 +134,13 @@ data class CrdtSub(val critDamage : UShort, val critMultiplier: Float, val flags
         ByteSub.create("CRDT",bytes).renderTo(mastersIncludingOrigin, consistencyRecorder, renderer)
     }
 
-    private fun asDebug(): String = "CrdtSub"
+    override fun asDebug(): String = "CrdtSub"
 }
 
 @UseExperimental(ExperimentalUnsignedTypes::class)
 data class KsizKwdaSub(val keywords : List<FormId>) : Subrecord {
+    override fun asDebug(): String = "${javaClass.simpleName} : $keywords"
+
     override val containsFormIds: Boolean = true
     override val formIds: List<FormId> = keywords
 
@@ -156,10 +149,6 @@ data class KsizKwdaSub(val keywords : List<FormId>) : Subrecord {
            return KsizKwdaSub(bytes.chunked(4).map { ExistingFormId.create(mastersWithOrigin, IndexedFormId(it.toLittleEndianUInt())) })
         }
     }
-    override fun asFormId(mastersWithOrigin : MastersWithOrigin): FormId = throw IllegalArgumentException("CrdtSub cannot be read as a FormId. Cast it explicitly to a CrdtSub then get the bits you need.")
-    override fun asFloat(): Float = throw IllegalArgumentException("CrdtSub cannot be read as a float")
-    override fun asString(): String = throw IllegalArgumentException("CrdtSub cannot be rendered as a string. Use 'asDebug()' if you want more info.")
-    override fun asBytes() : List<Byte> = throw IllegalArgumentException("CrdtSub cannot be rendered as raw bytes without a master list")
 
     override val type: String
         get() = "KWDA"
@@ -172,16 +161,56 @@ data class KsizKwdaSub(val keywords : List<FormId>) : Subrecord {
     }
 }
 
+data class StructSub(override val type: String, val bytes: List<Byte>) : Subrecord {
+
+    override val formIds: List<FormId> get() = listOf()
+
+    override fun asDebug(): String = "${javaClass.simpleName} : sub = $type, bytes = ${bytes.toReadableHexString()}"
+
+    companion object{
+        fun create(type: String, bytes: List<Byte>): StructSub {
+            return StructSub(type, bytes)
+        }
+    }
+
+    override val containsFormIds: Boolean = false
+
+    override fun renderTo(ignoredMWO: MastersWithOrigin, ignoredCr: ConsistencyRecorder, renderer: (ByteArray) -> Unit) {
+        renderer(type.toByteArray())
+        renderer(bytes.size.toShort().toLittleEndianBytes())
+        renderer(bytes.toByteArray())
+    }
+
+    fun toUShort(start: Int, end: Int): UShort = bytes.subList(start, end).toLittleEndianUShort()
+    fun toInt(start: Int, end: Int): Int = bytes.subList(start, end).toLittleEndianInt()
+    fun toFloat(start: Int, end: Int): Float  = bytes.subList(start, end).toLittleEndianFloat()
+    fun toUInt(start: Int, end: Int): UInt = bytes.subList(start, end).toLittleEndianUInt()
+
+    private fun replaceSection(start: Int, end: Int, newBytes: List<Byte>): List<Byte> {
+        return bytes.subList(0, start).plus(newBytes).plus(bytes.subList(end, bytes.size))
+    }
+
+    fun with(start: Int, end: Int, value: Any): List<Byte> {
+        return replaceSection(start, end,
+                when(value) {
+                    is UShort -> value.toLittleEndianByteList()
+                    is UInt -> value.toLittleEndianByteList()
+                    is Float -> value.toLittleEndianByteList()
+                    is Int -> value.toLittleEndianByteList()
+                    else -> throw IllegalArgumentException("Unknown type ${value.javaClass.simpleName} set in ${javaClass.simpleName} of type $type")
+                })
+    }
+
+}
+
 
 /** Used for subs which are covered by other subs, like KSIZ / KWDA **/
 class NonRenderingSub(override val type : String) : Subrecord {
+    override fun asDebug(): String = "${javaClass.simpleName} : type = $type"
+
     override val containsFormIds = false
     override val formIds: List<FormId> = listOf()
 
-    override fun asFormId(mastersWithOrigin : MastersWithOrigin): FormId = throw IllegalArgumentException("This $type is an empty sub; which usually means it's being dealt with somewhere else.")
-    override fun asFloat(): Float = throw IllegalArgumentException("This $type is an empty sub; which usually means it's being dealt with somewhere else.")
-    override fun asString(): String = throw IllegalArgumentException("This $type is an empty sub; which usually means it's being dealt with somewhere else.")
-    override fun asBytes() : List<Byte> = throw IllegalArgumentException("This $type is an empty sub; which usually means it's being dealt with somewhere else.")
 
     override fun renderTo(ignoredMasters: MastersWithOrigin, ignoredCr: ConsistencyRecorder, ignoredRenderer: (ByteArray) -> Unit) {
         // Deliberately does nothing.
