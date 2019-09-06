@@ -1,11 +1,14 @@
 package com.lunivore.chimmer.skyrim
 
 import com.lunivore.chimmer.ExistingFormId
+import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.NewFormId
-import com.lunivore.chimmer.binary.Record
-import com.lunivore.chimmer.binary.RecordWrapper
+import com.lunivore.chimmer.binary.*
 import com.lunivore.chimmer.helpers.EditorId
 import com.lunivore.chimmer.helpers.OriginMod
+
+
+data class StructLookup(val sub : String, val start: Int, val end: Int)
 
 @UseExperimental(ExperimentalUnsignedTypes::class)
 abstract class SkyrimObject<T : RecordWrapper<T>>(override val record: Record) : RecordWrapper<T> {
@@ -15,6 +18,21 @@ abstract class SkyrimObject<T : RecordWrapper<T>>(override val record: Record) :
     }
 
     protected abstract fun create(record: Record): T
+    protected fun structSubToUShort(lookup: StructLookup) = (record.find(lookup.sub) as StructSub).toUShort(lookup.start, lookup.end)
+    protected fun structSubToUInt(lookup: StructLookup) = (record.find(lookup.sub) as StructSub).toUInt(lookup.start, lookup.end)
+    protected fun structSubToInt(lookup: StructLookup) = (record.find(lookup.sub) as StructSub).toInt(lookup.start, lookup.end)
+    protected fun structSubToFloat(lookup: StructLookup) = (record.find(lookup.sub) as StructSub).toFloat(lookup.start, lookup.end)
+    protected fun formIdSubToFormId(subrecordType: String) = (record.find(subrecordType) as FormIdSub?)?.asFormId()
+    protected fun byteSubToString(subrecordType: String) = (record.find(subrecordType) as ByteSub?)?.asString() ?: ""
+
+
+    protected fun withStructPart(lookup: StructLookup, value: Any): T {
+        val data = (record.find(lookup.sub) as StructSub).with(lookup.start, lookup.end, value)
+        return create(record.with(StructSub.create(lookup.sub, data)))
+    }
+
+    protected fun withFormId(subrecordType: String, formId: FormId) = create(record.with(FormIdSub.create(subrecordType, formId)))
+
 
     override val formId
         get() = record.formId

@@ -22,12 +22,12 @@ data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
     }
 
     companion object {
-        data class StructLookup(val sub : String, val start: Int, val end: Int)
 
         private val VALUE = StructLookup("DATA", 0x0, 0x4)
         private val WEIGHT = StructLookup("DATA", 0x04, 0x08)
         private val DAMAGE = StructLookup("DATA", 0x08, 0x0A)
 
+        private val WEAPON_TYPE = StructLookup("DNAM", 0x0, 0x1)
         private val SPEED = StructLookup("DNAM", 0x04, 0x08)
         private val REACH = StructLookup("DNAM", 0x08, 0x0C)
         private val FLAGS = StructLookup("DNAM", 0x0C, 0x0E)
@@ -52,17 +52,17 @@ data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
 
     override fun create(newRecord: Record): Weapon = Weapon(newRecord)
 
-    val damage : UShort get() = (record.find(DAMAGE.sub) as StructSub).toUShort(DAMAGE.start, DAMAGE.end)
-    val weight : Float get() = (record.find(WEIGHT.sub) as StructSub).toFloat(WEIGHT.start, WEIGHT.end)
-    val value: UInt get() = (record.find(VALUE.sub) as StructSub).toUInt(VALUE.start, VALUE.end)
+    val damage : UShort get() = structSubToUShort(DAMAGE)
+    val weight : Float get() = structSubToFloat(WEIGHT)
+    val value: UInt get() = structSubToUInt(VALUE)
 
 
-    val weaponType: WeaponType = WeaponType.lookup((record.find("DNAM") as StructSub).toInt(0, 1))
-    val flags: UShort get() = (record.find(FLAGS.sub) as StructSub).toUShort(FLAGS.start, FLAGS.end)
-    val reach: Float get() = (record.find(REACH.sub) as StructSub).toFloat(REACH.start, REACH.end)
-    val speed: Float get() = (record.find(SPEED.sub) as StructSub).toFloat(SPEED.start, SPEED.end)
+    val weaponType: WeaponType = WeaponType.lookup(structSubToInt(WEAPON_TYPE))
+    val flags: UShort get() = structSubToUShort(FLAGS)
+    val reach: Float get() = structSubToFloat(REACH)
+    val speed: Float get() = structSubToFloat(SPEED)
 
-    val template: FormId? get() = (record.find("CNAM") as FormIdSub?)?.asFormId()
+    val template: FormId? get() = formIdSubToFormId("CNAM")
 
     val keywords: List<FormId> get() = (record.find("KWDA") as KsizKwdaSub?)?.keywords ?: listOf()
 
@@ -70,9 +70,9 @@ data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
     val criticalMultiplier: Float get() = (record.find("CRDT") as CrdtSub?)?.critMultiplier ?: 0.0f
     val criticalSpellEffect: FormId get() = (record.find("CRDT") as CrdtSub?)?.critSpellEffect ?: FormId.NULL_REFERENCE
 
-    val enchantment: FormId? get() = (record.find("EITM") as FormIdSub?)?.asFormId()
+    val enchantment: FormId? get() = formIdSubToFormId("EITM")
 
-    val editorId: String get() = (record.find("EDID") as ByteSub?)?.asString() ?: ""
+    val editorId: String get() = byteSubToString("EDID")
 
     fun plusKeyword(keywordToAdd: FormId): Weapon { return withKeywords(keywords.plus(keywordToAdd)) }
 
@@ -86,35 +86,12 @@ data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
         return create(record.with(FormIdSub.create("CNAM", newTemplate)).copy(mastersForParsing = newMasters))
     }
 
-    fun withValue(gold: UInt): Weapon {
-        val data = (record.find(VALUE.sub) as StructSub).with(VALUE.start, VALUE.end, gold)
-        return create(record.with(StructSub.create(VALUE.sub, data)))
-    }
-
-    fun withWeight(newWeight: Float): Weapon {
-        val data = (record.find(WEIGHT.sub) as StructSub).with(WEIGHT.start, WEIGHT.end, newWeight)
-        return create(record.with(StructSub.create(WEIGHT.sub, data)))
-    }
-
-    fun withDamage(newDamage: UShort): Weapon {
-        val data = (record.find(DAMAGE.sub) as StructSub).with(DAMAGE.start, DAMAGE.end, newDamage)
-        return create(record.with(StructSub.create(DAMAGE.sub, data)))
-    }
-
-    fun withReach(newReach: Float): Weapon {
-        val data = (record.find(REACH.sub) as StructSub).with(REACH.start, REACH.end, newReach)
-        return create(record.with(StructSub.create(REACH.sub, data)))
-    }
-
-    fun withSpeed(newSpeed: Float): Weapon {
-        val data = (record.find(SPEED.sub) as StructSub).with(SPEED.start, SPEED.end, newSpeed)
-        return create(record.with(StructSub.create(SPEED.sub, data)))
-    }
-
-    fun withFlags(newFlags: UShort): Weapon {
-        val data = (record.find(FLAGS.sub) as StructSub).with(FLAGS.start, FLAGS.end, newFlags)
-        return create(record.with(StructSub.create(FLAGS.sub, data)))
-    }
+    fun withValue(value: UInt): Weapon = withStructPart(VALUE, value)
+    fun withWeight(newWeight: Float): Weapon = withStructPart(WEIGHT, newWeight)
+    fun withDamage(newDamage: UShort): Weapon = withStructPart(DAMAGE, newDamage)
+    fun withReach(newReach: Float): Weapon = withStructPart(REACH, newReach)
+    fun withSpeed(newSpeed: Float): Weapon = withStructPart(SPEED, newSpeed)
+    fun withFlags(newFlags: UShort): Weapon = withStructPart(FLAGS, newFlags)
 
     fun withCriticalDamage(criticalDamage: Int): Weapon {
         return create(record.with(findOrCreateCrdt().copy(critDamage = criticalDamage.toUShort())))
@@ -142,8 +119,6 @@ data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
         return Masters(orderedMasters)
     }
 
-    fun withEnchantment(enchantment: FormId): Weapon {
-        return create(record.with(FormIdSub.create("EITM", enchantment)))
-    }
+    fun withEnchantment(enchantment: FormId): Weapon = withFormId("EITM", enchantment)
 
 }

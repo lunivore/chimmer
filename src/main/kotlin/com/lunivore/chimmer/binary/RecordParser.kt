@@ -80,7 +80,7 @@ class RecordParser(val menu : SubrecordMenu = SkyrimSubrecordMenu()) {
             DatatypeConverter.printHexBinary(bytes.subList(12, 16).reversed().toByteArray())
 
     private fun findMastersForTes4HeaderRecordOnly(subrecords: List<Subrecord>): List<String> {
-        return subrecords.filter { it.type == "MAST" }.map { it.asString() }
+        return subrecords.filter { it.type == "MAST" }.map { (it as ByteSub).asString() }
     }
 
     /**

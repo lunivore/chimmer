@@ -161,6 +161,7 @@ data class KsizKwdaSub(val keywords : List<FormId>) : Subrecord {
     }
 }
 
+@ExperimentalUnsignedTypes
 data class StructSub(override val type: String, val bytes: List<Byte>) : Subrecord {
 
     override val formIds: List<FormId> get() = listOf()
