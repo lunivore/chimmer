@@ -114,6 +114,10 @@ class LoadingAndSavingMods  : ChimmerScenario() {
         assertTrue(File(outputFolder.root, "$filename").exists())
     }
 
+    /**
+     * Note that this test will fail if Skyrim isn't installed with Steam, or if
+     * any of the usual .esm files are missing!
+     */
     @Test
     fun `should use plugins txt and Skyrim mod dir from the right places by default`() {
         // Given Chimmer
@@ -139,5 +143,13 @@ class LoadingAndSavingMods  : ChimmerScenario() {
         // Then we should be able to see those records too
         assertEquals("00000EB4", (mods[0].npcs[0].formId as ExistingFormId).unindexed.toBigEndianHexString())
         assertEquals("dunTransmogrifyDremora", mods[0].npcs[0].editorId)
+
+        // When we copy the record and save it
+        val newMod = chimmer.createMod("MyMod.esp").withNpcs(listOf(mods[0].npcs[0]))
+        chimmer.save(newMod)
+
+        // Then we should be able to load it again (because it got zipped back up on save)
+        val reloadedMod = chimmer.load(outputFolder.root, listOf("MyMod.esp"))[0]
+        assertEquals("dunTransmogrifyDremora", reloadedMod.npcs[0].editorId)
     }
 }

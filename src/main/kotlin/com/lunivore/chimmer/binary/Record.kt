@@ -6,9 +6,10 @@ import com.lunivore.chimmer.FormId
 import com.lunivore.chimmer.Logging
 import com.lunivore.chimmer.helpers.*
 import java.io.ByteArrayOutputStream
+import java.util.zip.Deflater
+import java.util.zip.DeflaterOutputStream
 import java.util.zip.Inflater
 import java.util.zip.InflaterOutputStream
-import javax.xml.bind.DatatypeConverter
 
 /**
  * Records hold data about some in-game object or concept, like an iron sword or a fireball spell. They have a
@@ -29,7 +30,9 @@ data class Record private constructor(val type: String, val flags: UInt, val for
                                       private val mastersForParsing: Masters, val menu: SubrecordMenu) {
 
     companion object {
-        enum class Flags(val flag : UInt) {
+        enum class HeaderFlags(val flag : UInt) {
+            MASTER_ESM(0x01u),
+            DELETED(0x20u),
             DATA_IS_COMPRESSED(0x00040000u);
 
             fun isSetIn(candidateFlags : UInt) = candidateFlags.and(flag) > 0u
@@ -67,6 +70,7 @@ data class Record private constructor(val type: String, val flags: UInt, val for
         }
 
         private val inflater = Inflater()
+        private val deflater = Deflater()
     }
 
     val masters: List<String>
@@ -82,7 +86,7 @@ data class Record private constructor(val type: String, val flags: UInt, val for
     val subrecords : List<Subrecord>
         get() {
             if (lazySubrecords == null) {
-                val bytesToUse = if (Flags.DATA_IS_COMPRESSED.isSetIn(flags)) unzip(recordBytes!!) else recordBytes!!
+                val bytesToUse = if (HeaderFlags.DATA_IS_COMPRESSED.isSetIn(flags)) unzip(recordBytes!!) else recordBytes!!
                 lazySubrecords = parseSubrecords(bytesToUse)
             }
             return lazySubrecords!!
@@ -90,6 +94,7 @@ data class Record private constructor(val type: String, val flags: UInt, val for
 
     private fun unzip(inputBytes: List<Byte>): List<Byte> {
         val out = ByteArrayOutputStream()
+        inflater.reset()
         val outStream = InflaterOutputStream(out, inflater)
         outStream.write(inputBytes.subList(4, inputBytes.size).toByteArray())
         outStream.close()
@@ -103,11 +108,8 @@ data class Record private constructor(val type: String, val flags: UInt, val for
     }
 
     private fun createMalformedErrorMessage(type: String, bytes: List<Byte>, modName: String): String {
-        return "Record $type with formId ${formIdAsString(bytes)} malformed in mod $modName"
+        return "Record $type $formId malformed in mod $modName"
     }
-
-    private fun formIdAsString(bytes: List<Byte>) =
-            DatatypeConverter.printHexBinary(bytes.subList(12, 16).reversed().toByteArray())
 
     fun render(mastersWithOrigin: MastersWithOrigin, consistencyRecorder: ConsistencyRecorder, renderer: (ByteArray) -> Unit) {
 
@@ -123,10 +125,25 @@ data class Record private constructor(val type: String, val flags: UInt, val for
                 subrecords
             }
 
-            var size = 0
-            subrecordsToRender.forEach { it.renderTo(mastersWithOrigin, consistencyRecorder) { size += it.size } }
-            renderRecordHeader(renderer, size, formIdToRender)
-            subrecordsToRender.forEach { it.renderTo(mastersWithOrigin, consistencyRecorder, renderer) }
+            if(HeaderFlags.DATA_IS_COMPRESSED.isSetIn(flags)) {
+                val bytesToZip = ByteArrayOutputStream()
+                subrecordsToRender.forEach { it.renderTo(mastersWithOrigin, consistencyRecorder, {bytesToZip.write(it)}) }
+                val zippedBytes = ByteArrayOutputStream()
+                deflater.reset()
+                val outStream = DeflaterOutputStream(zippedBytes, deflater)
+                outStream.write(bytesToZip.toByteArray())
+                outStream.close()
+                deflater.end()
+                renderRecordHeader(renderer, zippedBytes.size() + 4, formIdToRender)
+                renderer(zippedBytes.size().toLittleEndianBytes())
+                renderer(zippedBytes.toByteArray())
+            } else {
+
+                var size = 0
+                subrecordsToRender.forEach { it.renderTo(mastersWithOrigin, consistencyRecorder) { size += it.size } }
+                renderRecordHeader(renderer, size, formIdToRender)
+                subrecordsToRender.forEach { it.renderTo(mastersWithOrigin, consistencyRecorder, renderer) }
+            }
         } else if (recordBytes != null) {
             val newMasterlistIncompatible = mastersWithOrigin.masters.size < mastersForParsing.value.size || mastersWithOrigin.masters.subList(0, mastersForParsing.value.size) != mastersForParsing.value
             if (newMasterlistIncompatible) throw IllegalStateException("Attempted to render record of type $type, formId{ ${formId.asDebug()} with a new masterlist and without converting form ids.")

@@ -15,7 +15,7 @@ class CreatingANewMod : ChimmerScenario() {
         val plugins = listOf("Skyrim.esm", "IronSword.esp")
         val modDirectory = asResourceFile("plugins.txt").parentFile
         val chimmer = Chimmer(fileHandler())
-        var mods = chimmer.load(modDirectory, plugins,  ModsToLoad.SKIP_BETHESDA_MODS)
+        val mods = chimmer.load(modDirectory, plugins,  ModsToLoad.SKIP_BETHESDA_MODS)
 
         // When we parseAll a new mod with the same iron sword
         val modName = "NewIronSword_${System.currentTimeMillis()}.esp"

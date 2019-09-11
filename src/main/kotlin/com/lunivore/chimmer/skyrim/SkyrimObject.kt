@@ -32,7 +32,9 @@ abstract class SkyrimObject<T : RecordWrapper<T>>(override val record: Record) :
     }
 
     protected fun withFormId(subrecordType: String, formId: FormId) = create(record.with(FormIdSub.create(subrecordType, formId)))
-
+    fun delete(): T {
+        return create(record.copy(flags = record.flags.or(Record.Companion.HeaderFlags.DELETED.flag), lazySubrecords = listOf(), recordBytes = listOf()))
+    }
 
     override val formId
         get() = record.formId

@@ -1,7 +1,10 @@
 package com.lunivore.chimmer.skyrim
 
 import com.lunivore.chimmer.FormId
-import com.lunivore.chimmer.binary.*
+import com.lunivore.chimmer.binary.CrdtSub
+import com.lunivore.chimmer.binary.FormIdSub
+import com.lunivore.chimmer.binary.KsizKwdaSub
+import com.lunivore.chimmer.binary.Record
 import com.lunivore.chimmer.helpers.Masters
 
 @UseExperimental(ExperimentalUnsignedTypes::class)
@@ -57,7 +60,7 @@ data class Weapon(override val record: Record) : SkyrimObject<Weapon>(record) {
     val value: UInt get() = structSubToUInt(VALUE)
 
 
-    val weaponType: WeaponType = WeaponType.lookup(structSubToInt(WEAPON_TYPE))
+    val weaponType: WeaponType get() = WeaponType.lookup(structSubToInt(WEAPON_TYPE))
     val flags: UShort get() = structSubToUShort(FLAGS)
     val reach: Float get() = structSubToFloat(REACH)
     val speed: Float get() = structSubToFloat(SPEED)

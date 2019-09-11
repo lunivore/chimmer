@@ -40,6 +40,10 @@ data class Mod(val name: String, internal val modBinary: ModBinary) {
     fun withKeywords(keywords: List<Keyword>): Mod {
         return Mod(name, modBinary.createOrReplaceGrup("KYWD", keywords))
     }
+
+    fun withNpcs(npcs: List<Npc>): Mod {
+        return Mod(name, modBinary.createOrReplaceGrup("NPC_", npcs))
+    }
 }
 
 fun List<Mod>.merge(modName: String, loadOrder: List<String>) : Mod {
